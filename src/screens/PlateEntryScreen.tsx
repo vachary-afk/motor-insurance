@@ -6,6 +6,8 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,7 +28,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
-import PlatePreview, { PlateZone, PLATE_TOTAL_WIDTH, PLATE_CODE_WIDTH, PLATE_EMIRATE_WIDTH, PLATE_DIVIDER_WIDTH } from '../components/PlatePreview';
+import PlatePreview, { PlateZone } from '../components/PlatePreview';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'PlateEntry'>;
@@ -43,10 +45,10 @@ const PLATE_CODES: number[] = [
 ];
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
-const ZONE_HINT: Record<PlateZone, string> = {
-  emirate: 'Which emirate is your vehicle registered in?',
-  code:    'Select your plate code',
-  number:  'Enter your plate number',
+const ZONE_LABELS: Record<PlateZone, string> = {
+  emirate: 'Emirates of registration',
+  code:    'Enter plate code',
+  number:  'Plate number',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,15 +107,9 @@ function ContinueButton({ enabled, onPress }: { enabled: boolean; onPress: () =>
 // Selectable tag
 // ─────────────────────────────────────────────────────────────────────────────
 function SelectableTag({
-  label,
-  selected,
-  onPress,
-  flex,
+  label, selected, onPress,
 }: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-  flex?: number;
+  label: string; selected: boolean; onPress: () => void;
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -123,7 +119,7 @@ function SelectableTag({
       onPressIn={() => { scale.value = withSpring(0.93, { damping: 14, stiffness: 320 }); }}
       onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 200 }); }}
       onPress={onPress}
-      style={flex !== undefined ? { flex } : { flex: 1 }}
+      style={{ flex: 1 }}
     >
       <Animated.View style={[styles.tag, selected && styles.tagSelected, animStyle]}>
         <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{label}</Text>
@@ -148,7 +144,8 @@ function NumpadKey({ keyVal, onPress }: { keyVal: string; onPress: () => void })
       style={styles.numpadKeyWrap}
       onPressIn={() => {
         scale.value = withSpring(0.88, { damping: 12, stiffness: 400 });
-        bg.value = withTiming(1, { duration: 80 });
+        bg.value = withTiming(1, { duration: 60 });
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 10, stiffness: 200 });
@@ -171,6 +168,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const [activeZone, setActiveZone] = useState<PlateZone>('emirate');
   const [selectedEmirate, setSelectedEmirate] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<number | null>(null);
+  const [codeInputValue, setCodeInputValue] = useState('');
   const [plateNumber, setPlateNumber] = useState<string>('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -185,7 +183,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
   }, []);
 
   const dismiss = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     scrimOpacity.value = withTiming(0, { duration: 240 });
     sheetY.value = withSpring(
       SCREEN_HEIGHT,
@@ -206,40 +204,54 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const plateStyle = useAnimatedStyle(() => ({ transform: [{ scale: platePulse.value }] }));
   const pulse = useCallback(() => {
     platePulse.value = withSequence(
-      withSpring(1.05, { damping: 10, stiffness: 400 }),
+      withSpring(1.04, { damping: 10, stiffness: 400 }),
       withSpring(1, { damping: 12, stiffness: 220 })
     );
   }, []);
 
-  // Hint crossfade
-  const hintOpacity = useSharedValue(1);
+  // Zone label crossfade
+  const labelOpacity = useSharedValue(1);
   const switchZone = useCallback((zone: PlateZone) => {
-    hintOpacity.value = withSequence(
-      withTiming(0, { duration: 100 }),
+    labelOpacity.value = withSequence(
+      withTiming(0, { duration: 80 }),
       withTiming(1, { duration: 180 })
     );
     setActiveZone(zone);
   }, []);
-  const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }));
+  const labelStyle = useAnimatedStyle(() => ({ opacity: labelOpacity.value }));
 
   const handleEmirateSelect = useCallback((e: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedEmirate(e);
     pulse();
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => switchZone('code'), 380);
   }, [pulse, switchZone]);
 
-  const handleCodeSelect = useCallback((c: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleCodeSelect = useCallback((c: number, autoAdvance = true) => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedCode(c);
+    setCodeInputValue(String(c));
     pulse();
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => switchZone('number'), 380);
+    if (autoAdvance) {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      advanceTimer.current = setTimeout(() => switchZone('number'), 380);
+    }
   }, [pulse, switchZone]);
 
+  const handleCodeInputChange = useCallback((text: string) => {
+    const digits = text.replace(/[^0-9]/g, '').slice(0, 2);
+    setCodeInputValue(digits);
+    const num = parseInt(digits, 10);
+    if (!isNaN(num) && PLATE_CODES.includes(num)) {
+      setSelectedCode(num);
+      pulse();
+    } else {
+      setSelectedCode(null);
+    }
+  }, [pulse]);
+
   const handleNumpadPress = useCallback((digit: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (digit === '⌫') {
       setPlateNumber((prev) => {
         const next = prev.slice(0, -1);
@@ -252,14 +264,14 @@ export default function PlateEntryScreen({ navigation }: Props) {
   }, [plateNumber, pulse]);
 
   const handleZonePress = useCallback((zone: PlateZone) => {
-    Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     switchZone(zone);
   }, [switchZone]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
 
   const handleContinue = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation.navigate('Loading');
   }, [navigation]);
 
@@ -277,19 +289,18 @@ export default function PlateEntryScreen({ navigation }: Props) {
       {/* Sheet */}
       <Animated.View style={[styles.sheet, { paddingBottom: insets.bottom }, sheetStyle]}>
 
-        {/* Close X — top-left, matches Figma */}
+        {/* Close X */}
         <Pressable onPress={dismiss} hitSlop={14} style={[styles.closeBtn, { top: insets.top + 10 }]}>
           <Text style={styles.closeIcon}>✕</Text>
         </Pressable>
 
-        {/* Title — centered, Figma: "Share plate details for instant quotes." */}
+        {/* Title */}
         <View style={[styles.titleBlock, { marginTop: insets.top + 48 }]}>
           <Text style={styles.title}>Share plate details for{'\n'}instant quotes.</Text>
         </View>
 
-        {/* Plate — centered, tappable zones */}
+        {/* Plate + dynamic zone label */}
         <View style={styles.plateArea}>
-          <Text style={styles.plateHint}>Tap to share your plate details</Text>
           <Animated.View style={plateStyle}>
             <PlatePreview
               plateCode={selectedCode}
@@ -299,17 +310,27 @@ export default function PlateEntryScreen({ navigation }: Props) {
               onZonePress={handleZonePress}
             />
           </Animated.View>
+          <Animated.Text style={[styles.zoneLabel, labelStyle]}>
+            {ZONE_LABELS[activeZone]}
+          </Animated.Text>
         </View>
 
         {/* Panel */}
         <View style={styles.panel}>
           <ZonePanel key={activeZone} zoneKey={activeZone}>
+
+            {/* ── Emirate ── */}
             {activeZone === 'emirate' && (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
                 {emirateRows.map((row, ri) => (
                   <View key={ri} style={styles.row}>
                     {row.map((e) => (
-                      <SelectableTag key={e} label={e} selected={selectedEmirate === e} onPress={() => handleEmirateSelect(e)} />
+                      <SelectableTag
+                        key={e}
+                        label={e}
+                        selected={selectedEmirate === e}
+                        onPress={() => handleEmirateSelect(e)}
+                      />
                     ))}
                     {row.length === 1 && <View style={{ flex: 1 }} />}
                   </View>
@@ -317,21 +338,55 @@ export default function PlateEntryScreen({ navigation }: Props) {
               </ScrollView>
             )}
 
+            {/* ── Plate code ── */}
             {activeZone === 'code' && (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
-                {codeRows.map((row, ri) => (
-                  <View key={ri} style={styles.row}>
-                    {row.map((c) => (
-                      <SelectableTag key={c} label={String(c)} selected={selectedCode === c} onPress={() => handleCodeSelect(c)} />
-                    ))}
-                    {Array.from({ length: 4 - row.length }).map((_, i) => (
-                      <View key={`e${i}`} style={{ flex: 1 }} />
-                    ))}
-                  </View>
-                ))}
-              </ScrollView>
+              <View style={{ flex: 1 }}>
+                {/* Type-to-search input */}
+                <View style={styles.codeInputWrap}>
+                  <TextInput
+                    style={styles.codeInput}
+                    value={codeInputValue}
+                    onChangeText={handleCodeInputChange}
+                    keyboardType="number-pad"
+                    placeholder="Type plate code…"
+                    placeholderTextColor={Colors.gray400}
+                    maxLength={2}
+                    returnKeyType="done"
+                    autoFocus={false}
+                    accessible
+                    accessibilityLabel="Plate code input"
+                  />
+                  {codeInputValue.length > 0 && (
+                    <Pressable
+                      onPress={() => { setCodeInputValue(''); setSelectedCode(null); }}
+                      hitSlop={8}
+                      style={styles.clearBtn}
+                    >
+                      <Text style={styles.clearBtnText}>✕</Text>
+                    </Pressable>
+                  )}
+                </View>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+                  {codeRows.map((row, ri) => (
+                    <View key={ri} style={styles.row}>
+                      {row.map((c) => (
+                        <SelectableTag
+                          key={c}
+                          label={String(c)}
+                          selected={selectedCode === c}
+                          onPress={() => handleCodeSelect(c)}
+                        />
+                      ))}
+                      {Array.from({ length: 4 - row.length }).map((_, i) => (
+                        <View key={`e${i}`} style={{ flex: 1 }} />
+                      ))}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             )}
 
+            {/* ── Plate number ── */}
             {activeZone === 'number' && (
               <View style={styles.numpad}>
                 {NUMPAD_KEYS.map((key, i) =>
@@ -343,10 +398,11 @@ export default function PlateEntryScreen({ navigation }: Props) {
                 )}
               </View>
             )}
+
           </ZonePanel>
         </View>
 
-        {/* Footer — Continue + home indicator */}
+        {/* Footer */}
         <View style={styles.footer}>
           <ContinueButton enabled={canContinue} onPress={handleContinue} />
           <View style={styles.homeIndicator} />
@@ -357,7 +413,6 @@ export default function PlateEntryScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // Overlay
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -365,8 +420,6 @@ const styles = StyleSheet.create({
   scrim: {
     backgroundColor: '#000',
   },
-
-  // Sheet
   sheet: {
     height: SCREEN_HEIGHT,
     backgroundColor: Colors.white,
@@ -376,14 +429,12 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 24,
   },
-
-  // Close X — absolute top-left, matches Figma (no background)
   closeBtn: {
     position: 'absolute',
     left: 16,
     zIndex: 10,
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -392,12 +443,10 @@ const styles = StyleSheet.create({
     color: Colors.gray900,
     fontWeight: '400',
   },
-
-  // Title
   titleBlock: {
     alignItems: 'center',
     paddingHorizontal: 24,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontSize: 20,
@@ -406,26 +455,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28,
   },
-
-  // Plate
+  // Plate + label
   plateArea: {
     alignItems: 'center',
-    marginBottom: 24,
-    gap: 14,
+    marginBottom: 20,
+    gap: 12,
   },
-  plateHint: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.gray600,
+  zoneLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.brand600,
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
-
   // Panel
   panel: {
     flex: 1,
     paddingHorizontal: 16,
   },
-
   // Tag grid
   grid: {
     gap: 10,
@@ -459,7 +506,33 @@ const styles = StyleSheet.create({
     color: Colors.brand600,
     fontWeight: '700',
   },
-
+  // Code input
+  codeInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.gray50,
+    borderWidth: 1.5,
+    borderColor: Colors.gray200,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    height: 48,
+  },
+  codeInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.gray900,
+    height: '100%',
+    outlineStyle: 'none',
+  } as any,
+  clearBtn: {
+    padding: 4,
+  },
+  clearBtnText: {
+    fontSize: 13,
+    color: Colors.gray500,
+  },
   // Numpad
   numpad: {
     flexDirection: 'row',
@@ -472,25 +545,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   numpadKey: {
-    height: 48,
-    borderRadius: 10,
+    height: 52,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.gray200,
     alignItems: 'center',
     justifyContent: 'center',
   },
   numpadKeyText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '500',
     color: Colors.gray900,
   },
-
   // Footer
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 16,
     paddingBottom: 0,
-    gap: 0,
   },
   homeIndicator: {
     width: 134,

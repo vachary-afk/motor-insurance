@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { Colors } from '../constants/colors';
 
@@ -20,9 +21,9 @@ const EMIRATE_IMAGES: Record<string, ReturnType<typeof require>> = {
   'Fujairah':       require('../../assets/emirates/image 7.png'),
 };
 
-// ── Exported layout constants (used by PlateEntryScreen for label alignment) ─
-export const PLATE_TOTAL_WIDTH  = 324;
-export const PLATE_CODE_WIDTH   = 63;
+// ── Exported layout constants ─────────────────────────────────────────────────
+export const PLATE_TOTAL_WIDTH   = 324;
+export const PLATE_CODE_WIDTH    = 63;
 export const PLATE_EMIRATE_WIDTH = 81;
 export const PLATE_DIVIDER_WIDTH = 1;
 
@@ -35,7 +36,7 @@ type Props = {
   onZonePress: (zone: PlateZone) => void;
 };
 
-// ── Tappable zone wrapper ────────────────────────────────────────────────────
+// ── Tappable zone wrapper ─────────────────────────────────────────────────────
 type ZoneSectionProps = {
   active:   boolean;
   onPress:  () => void;
@@ -45,6 +46,14 @@ type ZoneSectionProps = {
 
 function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
   const scale = useSharedValue(1);
+  const indicatorOpacity = useSharedValue(active ? 1 : 0);
+  const bgOpacity = useSharedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    indicatorOpacity.value = withTiming(active ? 1 : 0, { duration: 220 });
+    bgOpacity.value = withTiming(active ? 1 : 0, { duration: 220 });
+  }, [active]);
+
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     flex: 1,
@@ -52,16 +61,28 @@ function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
     justifyContent: 'center' as const,
   }));
 
+  const activeOverlayStyle = useAnimatedStyle(() => ({
+    opacity: bgOpacity.value,
+  }));
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: indicatorOpacity.value,
+  }));
+
   return (
     <Pressable
       onPressIn={() => { scale.value = withSpring(0.91, { damping: 12, stiffness: 400 }); }}
-      onPressOut={() => { scale.value = withSpring(1,    { damping: 10, stiffness: 200 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
       onPress={onPress}
-      style={[style, active && styles.zoneActive]}
+      style={style}
     >
+      {/* Active bg overlay */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.activeOverlay, activeOverlayStyle]} />
       <Animated.View style={animStyle}>
         {children}
       </Animated.View>
+      {/* Bottom indicator bar */}
+      <Animated.View style={[styles.zoneIndicator, indicatorStyle]} />
     </Pressable>
   );
 }
@@ -72,15 +93,17 @@ export default function PlatePreview({
 }: Props) {
   const hasEmirate = emirate !== null;
   const isAbuDhabi = emirate === 'Abu Dhabi';
-  const imgSource   = emirate ? EMIRATE_IMAGES[emirate] : null;
+  const imgSource  = emirate ? EMIRATE_IMAGES[emirate] : null;
+  const numberFilled = plateNumber.length > 0;
 
-  // Code zone background & text colour
+  // Code zone colours
   const codeBg    = hasEmirate && isAbuDhabi ? Colors.red500 : Colors.white;
   const codeColor = hasEmirate && isAbuDhabi
     ? Colors.white
-    : hasEmirate
-      ? Colors.black          // other emirates → black text
-      : Colors.gray300;       // placeholder → gray
+    : hasEmirate ? Colors.black : Colors.gray300;
+
+  // Number zone bg: gray100 when empty, white when filled
+  const numberBg = numberFilled ? Colors.white : Colors.gray100;
 
   return (
     <View style={styles.plate}>
@@ -105,11 +128,7 @@ export default function PlatePreview({
         style={styles.emirateSection}
       >
         {imgSource ? (
-          <Image
-            source={imgSource}
-            style={styles.emirateImage}
-            resizeMode="contain"
-          />
+          <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
         ) : (
           <View style={styles.emiratePlaceholder}>
             <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
@@ -123,15 +142,10 @@ export default function PlatePreview({
       <ZoneSection
         active={activeZone === 'number'}
         onPress={() => onZonePress('number')}
-        style={styles.numberSection}
+        style={[styles.numberSection, { backgroundColor: numberBg }]}
       >
-        <Text
-          style={[
-            styles.numberText,
-            plateNumber.length > 0 ? styles.numberFilled : activeZone === 'number' && styles.numberActive,
-          ]}
-        >
-          {plateNumber.length > 0 ? plateNumber : '00000'}
+        <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
+          {numberFilled ? plateNumber : '00000'}
         </Text>
       </ZoneSection>
 
@@ -141,13 +155,13 @@ export default function PlatePreview({
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   plate: {
     width: PLATE_TOTAL_WIDTH,
     height: 60,
     borderWidth: 4,
-    borderColor: Colors.gray800,   // #4a4d5a — matches Figma
+    borderColor: Colors.gray800,
     borderRadius: 8,
     flexDirection: 'row',
     backgroundColor: Colors.white,
@@ -159,8 +173,18 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  zoneActive: {
+  activeOverlay: {
     backgroundColor: Colors.brand50,
+  },
+
+  zoneIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 4,
+    right: 4,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.brand600,
   },
 
   divider: {
@@ -209,10 +233,6 @@ const styles = StyleSheet.create({
   },
   numberFilled: {
     color: Colors.black,
-  },
-  numberActive: {
-    color: Colors.brand600,
-    opacity: 0.6,
   },
 
   // Inner shadow (top edge)
