@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shory.motorinsurance"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +25,25 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "name": "Motor Insurance",
+      "shortName": "Motor",
+      "description": "Get instant motor insurance quotes in the UAE",
+      "themeColor": "#1d68ff",
+      "backgroundColor": "#f3f2f8",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "en",
+      "scope": "/",
+      "startUrl": "/"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9d461d48-75d5-4de0-8533-a0807da83693"
+      }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
