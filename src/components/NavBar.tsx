@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 
 type NavBarProps = {
@@ -11,10 +10,8 @@ type NavBarProps = {
 };
 
 export default function NavBar({ title, onBack, showChat = false, backStyle = 'arrow' }: NavBarProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <View style={styles.bar}>
         {onBack ? (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>

@@ -5,6 +5,8 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withSequence,
+  Easing,
 } from 'react-native-reanimated';
 import { Colors } from '../constants/colors';
 
@@ -27,9 +29,17 @@ export const PLATE_CODE_WIDTH    = 63;
 export const PLATE_EMIRATE_WIDTH = 81;
 export const PLATE_DIVIDER_WIDTH = 1;
 
+// Triangle indicator X positions (center of each zone minus half triangle width)
+// code center: 63/2=31.5, emirate center: 63+1+81/2=104.5, number center: 63+1+81+1+178/2=235
+const ZONE_TRIANGLE_X: Record<PlateZone, number> = {
+  code:    31.5 - 6.5,   // 25
+  emirate: 104.5 - 6.5,  // 98
+  number:  235 - 6.5,    // 228.5
+};
+
 // ── Props ────────────────────────────────────────────────────────────────────
 type Props = {
-  plateCode:   number | null;
+  plateCode:   string | null;
   plateNumber: string;
   emirate:     string | null;
   activeZone:  PlateZone;
@@ -46,11 +56,9 @@ type ZoneSectionProps = {
 
 function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
   const scale = useSharedValue(1);
-  const indicatorOpacity = useSharedValue(active ? 1 : 0);
   const bgOpacity = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
-    indicatorOpacity.value = withTiming(active ? 1 : 0, { duration: 220 });
     bgOpacity.value = withTiming(active ? 1 : 0, { duration: 220 });
   }, [active]);
 
@@ -65,10 +73,6 @@ function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
     opacity: bgOpacity.value,
   }));
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    opacity: indicatorOpacity.value,
-  }));
-
   return (
     <Pressable
       onPressIn={() => { scale.value = withSpring(0.91, { damping: 12, stiffness: 400 }); }}
@@ -81,8 +85,6 @@ function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
       <Animated.View style={animStyle}>
         {children}
       </Animated.View>
-      {/* Bottom indicator bar */}
-      <Animated.View style={[styles.zoneIndicator, indicatorStyle]} />
     </Pressable>
   );
 }
@@ -96,67 +98,109 @@ export default function PlatePreview({
   const imgSource  = emirate ? EMIRATE_IMAGES[emirate] : null;
   const numberFilled = plateNumber.length > 0;
 
+  // Sliding triangle indicator
+  const triangleLeft = useSharedValue(ZONE_TRIANGLE_X[activeZone]);
+  useEffect(() => {
+    triangleLeft.value = withSpring(ZONE_TRIANGLE_X[activeZone], {
+      damping: 22, stiffness: 220,
+    });
+  }, [activeZone]);
+
+  const triangleStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: triangleLeft.value }],
+  }));
+
+  // Number entry micro-interaction: ease-out cubic-bezier(0.22, 1, 0.36, 1)
+  const numScale = useSharedValue(1);
+  useEffect(() => {
+    if (plateNumber.length > 0) {
+      numScale.value = withSequence(
+        withTiming(1.14, { duration: 70,  easing: Easing.bezier(0.22, 1, 0.36, 1) }),
+        withTiming(1,    { duration: 240, easing: Easing.bezier(0.22, 1, 0.36, 1) })
+      );
+    } else {
+      numScale.value = withTiming(1, { duration: 120, easing: Easing.out(Easing.cubic) });
+    }
+  }, [plateNumber]);
+
+  const numAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: numScale.value }],
+  }));
+
   // Code zone colours
   const codeBg    = hasEmirate && isAbuDhabi ? Colors.red500 : Colors.white;
   const codeColor = hasEmirate && isAbuDhabi
     ? Colors.white
     : hasEmirate ? Colors.black : Colors.gray300;
 
-  // Number zone bg: gray100 when empty, white when filled
+  // Number zone bg
   const numberBg = numberFilled ? Colors.white : Colors.gray100;
 
   return (
-    <View style={styles.plate}>
+    <View style={styles.wrapper}>
+      {/* ── Plate ── */}
+      <View style={styles.plate}>
 
-      {/* ── Code zone ── */}
-      <ZoneSection
-        active={activeZone === 'code'}
-        onPress={() => onZonePress('code')}
-        style={[styles.codeSection, { backgroundColor: codeBg }]}
-      >
-        <Text style={[styles.codeText, { color: codeColor }]}>
-          {plateCode !== null ? String(plateCode) : '0'}
-        </Text>
-      </ZoneSection>
+        {/* Code zone */}
+        <ZoneSection
+          active={activeZone === 'code'}
+          onPress={() => onZonePress('code')}
+          style={[styles.codeSection, { backgroundColor: codeBg }]}
+        >
+          <Text style={[styles.codeText, { color: codeColor }]} numberOfLines={1} adjustsFontSizeToFit>
+            {plateCode !== null ? plateCode : '0'}
+          </Text>
+        </ZoneSection>
 
-      <View style={styles.divider} />
+        <View style={styles.divider} />
 
-      {/* ── Emirate zone ── */}
-      <ZoneSection
-        active={activeZone === 'emirate'}
-        onPress={() => onZonePress('emirate')}
-        style={styles.emirateSection}
-      >
-        {imgSource ? (
-          <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
-        ) : (
-          <View style={styles.emiratePlaceholder}>
-            <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
-          </View>
-        )}
-      </ZoneSection>
+        {/* Emirate zone */}
+        <ZoneSection
+          active={activeZone === 'emirate'}
+          onPress={() => onZonePress('emirate')}
+          style={styles.emirateSection}
+        >
+          {imgSource ? (
+            <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
+          ) : (
+            <View style={styles.emiratePlaceholder}>
+              <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
+            </View>
+          )}
+        </ZoneSection>
 
-      <View style={styles.divider} />
+        <View style={styles.divider} />
 
-      {/* ── Number zone ── */}
-      <ZoneSection
-        active={activeZone === 'number'}
-        onPress={() => onZonePress('number')}
-        style={[styles.numberSection, { backgroundColor: numberBg }]}
-      >
-        <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
-          {numberFilled ? plateNumber : '00000'}
-        </Text>
-      </ZoneSection>
+        {/* Number zone */}
+        <ZoneSection
+          active={activeZone === 'number'}
+          onPress={() => onZonePress('number')}
+          style={[styles.numberSection, { backgroundColor: numberBg }]}
+        >
+          <Animated.View style={numAnimStyle}>
+            <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
+              {numberFilled ? plateNumber : '00000'}
+            </Text>
+          </Animated.View>
+        </ZoneSection>
 
-      {/* Inner shadow overlay */}
-      <View style={styles.innerShadow} pointerEvents="none" />
+        {/* Inner shadow overlay */}
+        <View style={styles.innerShadow} pointerEvents="none" />
+      </View>
+
+      {/* ── Sliding triangle indicator ── */}
+      <View style={styles.triangleRow}>
+        <Animated.View style={[styles.triangle, triangleStyle]} />
+      </View>
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'flex-start',
+  },
   plate: {
     width: PLATE_TOTAL_WIDTH,
     height: 60,
@@ -177,14 +221,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand50,
   },
 
-  zoneIndicator: {
+  triangleRow: {
+    width: PLATE_TOTAL_WIDTH,
+    height: 8,
+    position: 'relative',
+    marginTop: 3,
+  },
+  triangle: {
     position: 'absolute',
-    bottom: 0,
-    left: 4,
-    right: 4,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: Colors.brand600,
+    top: 0,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6.5,
+    borderRightWidth: 6.5,
+    borderBottomWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#4A4D5A',
   },
 
   divider: {

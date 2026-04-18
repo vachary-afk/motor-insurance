@@ -17,7 +17,6 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  withSequence,
   interpolateColor,
   runOnJS,
   Easing,
@@ -39,9 +38,13 @@ const EMIRATES = [
   'Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman',
   'Um Al Quwain', 'Ras Al Khaimah', 'Fujairah',
 ];
-const PLATE_CODES: number[] = [
-  1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-  16, 17, 18, 19, 20, 21, 22, 50,
+const PLATE_CODES: string[] = [
+  '1', '2', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15',
+  '16', '17', '18', '19', '20', '21', '22', '50',
+];
+const PLATE_TEXT_CODES: string[] = [
+  'Bank', 'Classic', 'Diplomatic', 'Grey', 'Red', 'Code 9',
+  'Motorcycle 1', 'Motorcycle 2', 'Motorcycle 3', 'White',
 ];
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
@@ -52,7 +55,7 @@ const ZONE_LABELS: Record<PlateZone, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Animated panel — fades + slides in when zone changes
+// Animated panel
 // ─────────────────────────────────────────────────────────────────────────────
 function ZonePanel({ children, zoneKey }: { children: React.ReactNode; zoneKey: string }) {
   const opacity = useSharedValue(0);
@@ -106,9 +109,7 @@ function ContinueButton({ enabled, onPress }: { enabled: boolean; onPress: () =>
 // ─────────────────────────────────────────────────────────────────────────────
 // Selectable tag
 // ─────────────────────────────────────────────────────────────────────────────
-function SelectableTag({
-  label, selected, onPress,
-}: {
+function SelectableTag({ label, selected, onPress }: {
   label: string; selected: boolean; onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -145,7 +146,6 @@ function NumpadKey({ keyVal, onPress }: { keyVal: string; onPress: () => void })
       onPressIn={() => {
         scale.value = withSpring(0.88, { damping: 12, stiffness: 400 });
         bg.value = withTiming(1, { duration: 60 });
-        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 10, stiffness: 200 });
@@ -167,7 +167,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [activeZone, setActiveZone] = useState<PlateZone>('emirate');
   const [selectedEmirate, setSelectedEmirate] = useState<string | null>(null);
-  const [selectedCode, setSelectedCode] = useState<number | null>(null);
+  const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [codeInputValue, setCodeInputValue] = useState('');
   const [plateNumber, setPlateNumber] = useState<string>('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,23 +199,12 @@ export default function PlateEntryScreen({ navigation }: Props) {
     opacity: scrimOpacity.value,
   }));
 
-  // Plate pulse
-  const platePulse = useSharedValue(1);
-  const plateStyle = useAnimatedStyle(() => ({ transform: [{ scale: platePulse.value }] }));
-  const pulse = useCallback(() => {
-    platePulse.value = withSequence(
-      withSpring(1.04, { damping: 10, stiffness: 400 }),
-      withSpring(1, { damping: 12, stiffness: 220 })
-    );
-  }, []);
-
-  // Zone label crossfade
+  // Zone label crossfade (no plate pulse)
   const labelOpacity = useSharedValue(1);
   const switchZone = useCallback((zone: PlateZone) => {
-    labelOpacity.value = withSequence(
-      withTiming(0, { duration: 80 }),
-      withTiming(1, { duration: 180 })
-    );
+    labelOpacity.value = withTiming(0, { duration: 80 }, () => {
+      labelOpacity.value = withTiming(1, { duration: 180 });
+    });
     setActiveZone(zone);
   }, []);
   const labelStyle = useAnimatedStyle(() => ({ opacity: labelOpacity.value }));
@@ -223,45 +212,41 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const handleEmirateSelect = useCallback((e: string) => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedEmirate(e);
-    pulse();
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => switchZone('code'), 380);
-  }, [pulse, switchZone]);
+  }, [switchZone]);
 
-  const handleCodeSelect = useCallback((c: number, autoAdvance = true) => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedCode(c);
-    setCodeInputValue(String(c));
-    pulse();
-    if (autoAdvance) {
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
-      advanceTimer.current = setTimeout(() => switchZone('number'), 380);
+  const triggerHaptic = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else if (typeof navigator !== 'undefined' && (navigator as any).vibrate) {
+      (navigator as any).vibrate(10);
     }
-  }, [pulse, switchZone]);
+  }, []);
+
+  const handleCodeSelect = useCallback((c: string) => {
+    triggerHaptic();
+    setSelectedCode(c);
+    setCodeInputValue(c);
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => switchZone('number'), 380);
+  }, [switchZone, triggerHaptic]);
 
   const handleCodeInputChange = useCallback((text: string) => {
-    const digits = text.replace(/[^0-9]/g, '').slice(0, 2);
-    setCodeInputValue(digits);
-    const num = parseInt(digits, 10);
-    if (!isNaN(num) && PLATE_CODES.includes(num)) {
-      setSelectedCode(num);
-      pulse();
-    } else {
-      setSelectedCode(null);
-    }
-  }, [pulse]);
+    setCodeInputValue(text);
+    const allCodes = [...PLATE_CODES, ...PLATE_TEXT_CODES];
+    const match = allCodes.find(c => c.toLowerCase() === text.toLowerCase());
+    setSelectedCode(match ?? null);
+  }, []);
 
   const handleNumpadPress = useCallback((digit: string) => {
+    triggerHaptic();
     if (digit === '⌫') {
-      setPlateNumber((prev) => {
-        const next = prev.slice(0, -1);
-        if (next !== prev) pulse();
-        return next;
-      });
+      setPlateNumber((prev) => prev.slice(0, -1));
     } else if (plateNumber.length < 5) {
-      setPlateNumber((prev) => { pulse(); return prev + digit; });
+      setPlateNumber((prev) => prev + digit);
     }
-  }, [plateNumber, pulse]);
+  }, [plateNumber]);
 
   const handleZonePress = useCallback((zone: PlateZone) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
@@ -278,8 +263,18 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const emirateRows: string[][] = [];
   for (let i = 0; i < EMIRATES.length; i += 2) emirateRows.push(EMIRATES.slice(i, i + 2));
 
-  const codeRows: number[][] = [];
-  for (let i = 0; i < PLATE_CODES.length; i += 4) codeRows.push(PLATE_CODES.slice(i, i + 4));
+  const query = codeInputValue.trim().toLowerCase();
+  const filteredNumCodes = query
+    ? PLATE_CODES.filter(c => c.includes(query))
+    : PLATE_CODES;
+  const filteredTextCodes = query
+    ? PLATE_TEXT_CODES.filter(c => c.toLowerCase().includes(query))
+    : PLATE_TEXT_CODES;
+
+  const numCodeRows: string[][] = [];
+  for (let i = 0; i < filteredNumCodes.length; i += 4) numCodeRows.push(filteredNumCodes.slice(i, i + 4));
+  const textCodeRows: string[][] = [];
+  for (let i = 0; i < filteredTextCodes.length; i += 2) textCodeRows.push(filteredTextCodes.slice(i, i + 2));
 
   return (
     <View style={styles.overlay}>
@@ -287,7 +282,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, scrimStyle]} pointerEvents="none" />
 
       {/* Sheet */}
-      <Animated.View style={[styles.sheet, { paddingBottom: insets.bottom }, sheetStyle]}>
+      <Animated.View style={[styles.sheet, sheetStyle]}>
 
         {/* Close X */}
         <Pressable onPress={dismiss} hitSlop={14} style={[styles.closeBtn, { top: insets.top + 10 }]}>
@@ -299,17 +294,15 @@ export default function PlateEntryScreen({ navigation }: Props) {
           <Text style={styles.title}>Share plate details for{'\n'}instant quotes.</Text>
         </View>
 
-        {/* Plate + dynamic zone label */}
+        {/* Plate + zone label */}
         <View style={styles.plateArea}>
-          <Animated.View style={plateStyle}>
-            <PlatePreview
-              plateCode={selectedCode}
-              plateNumber={plateNumber}
-              emirate={selectedEmirate}
-              activeZone={activeZone}
-              onZonePress={handleZonePress}
-            />
-          </Animated.View>
+          <PlatePreview
+            plateCode={selectedCode}
+            plateNumber={plateNumber}
+            emirate={selectedEmirate}
+            activeZone={activeZone}
+            onZonePress={handleZonePress}
+          />
           <Animated.Text style={[styles.zoneLabel, labelStyle]}>
             {ZONE_LABELS[activeZone]}
           </Animated.Text>
@@ -325,12 +318,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
                 {emirateRows.map((row, ri) => (
                   <View key={ri} style={styles.row}>
                     {row.map((e) => (
-                      <SelectableTag
-                        key={e}
-                        label={e}
-                        selected={selectedEmirate === e}
-                        onPress={() => handleEmirateSelect(e)}
-                      />
+                      <SelectableTag key={e} label={e} selected={selectedEmirate === e} onPress={() => handleEmirateSelect(e)} />
                     ))}
                     {row.length === 1 && <View style={{ flex: 1 }} />}
                   </View>
@@ -341,47 +329,53 @@ export default function PlateEntryScreen({ navigation }: Props) {
             {/* ── Plate code ── */}
             {activeZone === 'code' && (
               <View style={{ flex: 1 }}>
-                {/* Type-to-search input */}
+                {/* Search input */}
                 <View style={styles.codeInputWrap}>
                   <TextInput
                     style={styles.codeInput}
                     value={codeInputValue}
                     onChangeText={handleCodeInputChange}
-                    keyboardType="number-pad"
-                    placeholder="Type plate code…"
+                    keyboardType="default"
+                    placeholder="Search for plate code"
                     placeholderTextColor={Colors.gray400}
-                    maxLength={2}
                     returnKeyType="done"
-                    autoFocus={false}
+                    autoCorrect={false}
+                    autoCapitalize="none"
                     accessible
-                    accessibilityLabel="Plate code input"
+                    accessibilityLabel="Plate code search"
                   />
                   {codeInputValue.length > 0 && (
-                    <Pressable
-                      onPress={() => { setCodeInputValue(''); setSelectedCode(null); }}
-                      hitSlop={8}
-                      style={styles.clearBtn}
-                    >
+                    <Pressable onPress={() => { setCodeInputValue(''); setSelectedCode(null); }} hitSlop={8} style={styles.clearBtn}>
                       <Text style={styles.clearBtnText}>✕</Text>
                     </Pressable>
                   )}
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
-                  {codeRows.map((row, ri) => (
-                    <View key={ri} style={styles.row}>
+                  {/* Numeric codes */}
+                  {numCodeRows.length > 0 && numCodeRows.map((row, ri) => (
+                    <View key={`n${ri}`} style={styles.row}>
                       {row.map((c) => (
-                        <SelectableTag
-                          key={c}
-                          label={String(c)}
-                          selected={selectedCode === c}
-                          onPress={() => handleCodeSelect(c)}
-                        />
+                        <SelectableTag key={c} label={c} selected={selectedCode === c} onPress={() => handleCodeSelect(c)} />
                       ))}
                       {Array.from({ length: 4 - row.length }).map((_, i) => (
                         <View key={`e${i}`} style={{ flex: 1 }} />
                       ))}
                     </View>
                   ))}
+                  {/* Special types */}
+                  {filteredTextCodes.length > 0 && (
+                    <>
+                      <Text style={styles.sectionLabel}>Special types</Text>
+                      {textCodeRows.map((row, ri) => (
+                        <View key={`t${ri}`} style={styles.row}>
+                          {row.map((c) => (
+                            <SelectableTag key={c} label={c} selected={selectedCode === c} onPress={() => handleCodeSelect(c)} />
+                          ))}
+                          {row.length === 1 && <View style={{ flex: 1 }} />}
+                        </View>
+                      ))}
+                    </>
+                  )}
                 </ScrollView>
               </View>
             )}
@@ -403,9 +397,8 @@ export default function PlateEntryScreen({ navigation }: Props) {
         </View>
 
         {/* Footer */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
           <ContinueButton enabled={canContinue} onPress={handleContinue} />
-          <View style={styles.homeIndicator} />
         </View>
       </Animated.View>
     </View>
@@ -421,7 +414,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   sheet: {
-    height: SCREEN_HEIGHT,
+    flex: 1,
     backgroundColor: Colors.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -6 },
@@ -459,14 +452,14 @@ const styles = StyleSheet.create({
   plateArea: {
     alignItems: 'center',
     marginBottom: 20,
-    gap: 12,
+    gap: 4,
   },
   zoneLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.brand600,
+    fontWeight: '700',
+    color: Colors.black,
     textAlign: 'center',
-    letterSpacing: 0.1,
+    marginVertical: 12,
   },
   // Panel
   panel: {
@@ -505,6 +498,15 @@ const styles = StyleSheet.create({
   tagTextSelected: {
     color: Colors.brand600,
     fontWeight: '700',
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginTop: 4,
+    marginBottom: 2,
   },
   // Code input
   codeInputWrap: {
@@ -560,17 +562,7 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 0,
-  },
-  homeIndicator: {
-    width: 134,
-    height: 5,
-    borderRadius: 100,
-    backgroundColor: Colors.black,
-    alignSelf: 'center',
-    marginTop: 8,
-    opacity: 0.2,
+    paddingTop: 12,
   },
   continueBtn: {
     height: 52,
@@ -586,5 +578,16 @@ const styles = StyleSheet.create({
   continueBtnTextActive: {
     color: Colors.white,
     fontWeight: '700',
+  },
+  termsText: {
+    fontSize: 10,
+    color: Colors.gray600,
+    lineHeight: 15,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  termsLink: {
+    color: Colors.brand600,
+    textDecorationLine: 'underline',
   },
 });

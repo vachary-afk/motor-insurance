@@ -105,7 +105,7 @@ export default function HomeScreen({ navigation }: Props) {
   const termsStyle = useEntranceAnim(380);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <NavBar title="Motor insurance" showChat />
       <ScrollView
         style={styles.scroll}
@@ -145,22 +145,22 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.ratingSubtext}>By 11,000+ people.</Text>
           </View>
         </Animated.View>
-
-        {/* Terms */}
-        <Animated.View style={[styles.termsContainer, termsStyle]}>
-          <Text style={styles.termsText}>
-            By continuing, you authorize Shory to retrieve your personal and Vehicle details
-            from the relevant authorities, and you agree to our{' '}
-            <Text
-              style={styles.termsLink}
-              onPress={() => Linking.openURL('https://shory.sa/en/terms-and-conditions')}
-            >
-              Terms & Conditions
-            </Text>
-            .
-          </Text>
-        </Animated.View>
       </ScrollView>
+
+      {/* Terms — pinned to footer above safe area */}
+      <Animated.View style={[styles.termsContainer, termsStyle]}>
+        <Text style={styles.termsText}>
+          By continuing, you authorize Shory to retrieve your personal and Vehicle details
+          from the relevant authorities, and you agree to our{' '}
+          <Text
+            style={styles.termsLink}
+            onPress={() => Linking.openURL('https://shory.sa/en/terms-and-conditions')}
+          >
+            Terms & Conditions
+          </Text>
+          .
+        </Text>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -168,9 +168,9 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.white,
   },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -278,8 +278,9 @@ const styles = StyleSheet.create({
 
   // Terms
   termsContainer: {
-    paddingHorizontal: 8,
-    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.background,
   },
   termsText: {
     fontSize: 10,
