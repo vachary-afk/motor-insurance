@@ -317,7 +317,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
         </View>
 
         {/* Panel */}
-        <View style={styles.panel}>
+        <View style={[styles.panel, { paddingBottom: insets.bottom + 80 }]}>
           <ZonePanel key={activeZone} zoneKey={activeZone}>
 
             {/* ── Emirate ── */}
@@ -404,7 +404,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
           </ZonePanel>
         </View>
 
-        {/* Footer */}
+        {/* Footer — absolutely pinned to bottom */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
           <ContinueButton enabled={canContinue} onPress={handleContinue} />
         </View>
@@ -415,8 +415,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    ...StyleSheet.absoluteFillObject,
   },
   scrim: {
     backgroundColor: '#000',
@@ -567,10 +566,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.gray900,
   },
-  // Footer
+  // Footer — pinned to bottom regardless of panel content height
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
+    backgroundColor: Colors.white,
   },
   continueBtn: {
     height: 52,
