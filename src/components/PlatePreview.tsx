@@ -107,7 +107,7 @@ export default function PlatePreview({
   }, [activeZone]);
 
   const triangleStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: triangleLeft.value }],
+    left: triangleLeft.value,
   }));
 
   // Number entry micro-interaction: ease-out cubic-bezier(0.22, 1, 0.36, 1)
@@ -137,70 +137,62 @@ export default function PlatePreview({
   const numberBg = numberFilled ? Colors.white : Colors.gray100;
 
   return (
-    <View style={styles.wrapper}>
-      {/* ── Plate ── */}
-      <View style={styles.plate}>
+    <View style={styles.plate}>
 
-        {/* Code zone */}
-        <ZoneSection
-          active={activeZone === 'code'}
-          onPress={() => onZonePress('code')}
-          style={[styles.codeSection, { backgroundColor: codeBg }]}
-        >
-          <Text style={[styles.codeText, { color: codeColor }]} numberOfLines={1} adjustsFontSizeToFit>
-            {plateCode !== null ? plateCode : '0'}
+      {/* Code zone */}
+      <ZoneSection
+        active={activeZone === 'code'}
+        onPress={() => onZonePress('code')}
+        style={[styles.codeSection, { backgroundColor: codeBg }]}
+      >
+        <Text style={[styles.codeText, { color: codeColor }]} numberOfLines={1} adjustsFontSizeToFit>
+          {plateCode !== null ? plateCode : '0'}
+        </Text>
+      </ZoneSection>
+
+      <View style={styles.divider} />
+
+      {/* Emirate zone */}
+      <ZoneSection
+        active={activeZone === 'emirate'}
+        onPress={() => onZonePress('emirate')}
+        style={styles.emirateSection}
+      >
+        {imgSource ? (
+          <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
+        ) : (
+          <View style={styles.emiratePlaceholder}>
+            <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
+          </View>
+        )}
+      </ZoneSection>
+
+      <View style={styles.divider} />
+
+      {/* Number zone */}
+      <ZoneSection
+        active={activeZone === 'number'}
+        onPress={() => onZonePress('number')}
+        style={[styles.numberSection, { backgroundColor: numberBg }]}
+      >
+        <Animated.View style={numAnimStyle}>
+          <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
+            {numberFilled ? plateNumber : '00000'}
           </Text>
-        </ZoneSection>
+        </Animated.View>
+      </ZoneSection>
 
-        <View style={styles.divider} />
+      {/* ── Sliding triangle indicator inside plate ── */}
+      <Animated.View style={[styles.zoneTriangle, triangleStyle]} pointerEvents="none" />
 
-        {/* Emirate zone */}
-        <ZoneSection
-          active={activeZone === 'emirate'}
-          onPress={() => onZonePress('emirate')}
-          style={styles.emirateSection}
-        >
-          {imgSource ? (
-            <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
-          ) : (
-            <View style={styles.emiratePlaceholder}>
-              <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
-            </View>
-          )}
-        </ZoneSection>
-
-        <View style={styles.divider} />
-
-        {/* Number zone */}
-        <ZoneSection
-          active={activeZone === 'number'}
-          onPress={() => onZonePress('number')}
-          style={[styles.numberSection, { backgroundColor: numberBg }]}
-        >
-          <Animated.View style={numAnimStyle}>
-            <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
-              {numberFilled ? plateNumber : '00000'}
-            </Text>
-          </Animated.View>
-        </ZoneSection>
-
-        {/* Inner shadow overlay */}
-        <View style={styles.innerShadow} pointerEvents="none" />
-      </View>
-
-      {/* ── Sliding triangle indicator ── */}
-      <View style={styles.triangleRow}>
-        <Animated.View style={[styles.triangle, triangleStyle]} />
-      </View>
+      {/* Inner shadow overlay */}
+      <View style={styles.innerShadow} pointerEvents="none" />
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'flex-start',
-  },
   plate: {
     width: PLATE_TOTAL_WIDTH,
     height: 60,
@@ -221,15 +213,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand50,
   },
 
-  triangleRow: {
-    width: PLATE_TOTAL_WIDTH,
-    height: 8,
-    position: 'relative',
-    marginTop: 3,
-  },
-  triangle: {
+  zoneTriangle: {
     position: 'absolute',
-    top: 0,
+    bottom: 3,
     width: 0,
     height: 0,
     borderLeftWidth: 6.5,
@@ -237,7 +223,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 7,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: '#4A4D5A',
+    borderBottomColor: Colors.brand600,
+    zIndex: 10,
   },
 
   divider: {

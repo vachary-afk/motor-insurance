@@ -144,11 +144,11 @@ function NumpadKey({ keyVal, onPress }: { keyVal: string; onPress: () => void })
     <Pressable
       style={styles.numpadKeyWrap}
       onPressIn={() => {
-        scale.value = withSpring(0.88, { damping: 12, stiffness: 400 });
+        scale.value = withTiming(0.86, { duration: 80, easing: Easing.bezier(0.22, 1, 0.36, 1) });
         bg.value = withTiming(1, { duration: 60 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+        scale.value = withTiming(1, { duration: 320, easing: Easing.bezier(0.22, 1, 0.36, 1) });
         bg.value = withTiming(0, { duration: 200 });
       }}
       onPress={onPress}
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   plateArea: {
     alignItems: 'center',
     marginBottom: 20,
-    gap: 4,
+    gap: 8,
   },
   zoneLabel: {
     fontSize: 14,
