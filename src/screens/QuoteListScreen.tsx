@@ -19,15 +19,15 @@ import Animated, {
   withDelay,
   Easing,
   interpolate,
-  runOnJS,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
 import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
 import NavBar from '../components/NavBar';
 import PressableScale from '../components/PressableScale';
+import AINotchPanel from '../components/AINotchPanel';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'QuoteList'>;
@@ -83,7 +83,16 @@ function ChevronIcon({ up, color = Colors.brand600, size = 14 }: { up: boolean; 
 // ─────────────────────────────────────────────────────────────────────────────
 // Vehicle details strip (auto-expand 4s, tap image/chevron to toggle)
 // ─────────────────────────────────────────────────────────────────────────────
-const EXPANDED_CONTENT_H = 68;
+const EXPANDED_CONTENT_H = 218;
+
+const VEHICLE_DETAILS: { label: string; value: string; bold?: boolean }[] = [
+  { label: "Owner's EID number",   value: '784-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022000-1' },
+  { label: 'Vehicle',              value: 'Honda Accord 2018', bold: true },
+  { label: 'Specs',                value: 'GCC' },
+  { label: 'Your policy start date', value: '31/12/2024' },
+  { label: 'Estimated value',      value: 'AED 75,000' },
+  { label: 'Claim history',        value: 'Never', bold: true },
+];
 
 function VehicleStrip({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const expandH  = useSharedValue(0);
@@ -129,23 +138,16 @@ function VehicleStrip({ expanded, onToggle }: { expanded: boolean; onToggle: () 
       {/* Expanded content */}
       <Animated.View style={expandedStyle}>
         <View style={styles.expandedContent}>
-          <View style={styles.expandedRow}>
-            <View style={styles.expandedItem}>
-              <Text style={styles.expandedLabel}>Plate</Text>
-              <Text style={styles.expandedValue}>DXB • 12345</Text>
+          <Text style={styles.detailsTitle}>Details</Text>
+          {VEHICLE_DETAILS.map((row, i) => (
+            <View key={i} style={[styles.detailRow, i === VEHICLE_DETAILS.length - 1 && { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailRowLabel}>{row.label}</Text>
+              <Text style={[styles.detailRowValue, row.bold && styles.detailRowValueBold]}>{row.value}</Text>
             </View>
-            <View style={styles.expandedItem}>
-              <Text style={styles.expandedLabel}>Year</Text>
-              <Text style={styles.expandedValue}>2018</Text>
-            </View>
-            <View style={styles.expandedItem}>
-              <Text style={styles.expandedLabel}>Colour</Text>
-              <Text style={styles.expandedValue}>Silver</Text>
-            </View>
-            <Pressable onPress={onToggle} style={styles.editVehicleBtn}>
-              <Text style={styles.editVehicleText}>Edit</Text>
-            </Pressable>
-          </View>
+          ))}
+          <Pressable onPress={onToggle} hitSlop={8} style={styles.editBelowBtn}>
+            <Text style={styles.editVehicleText}>Edit</Text>
+          </Pressable>
         </View>
       </Animated.View>
     </View>
@@ -210,6 +212,43 @@ function FilterBar({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Small info icon (circle with i)
+// ─────────────────────────────────────────────────────────────────────────────
+function InfoIcon() {
+  return (
+    <Svg width={13} height={13} viewBox="0 0 13 13" fill="none">
+      <Circle cx="6.5" cy="6.5" r="6" stroke={Colors.gray400} strokeWidth="1" />
+      <Path
+        d="M6.5 6V9.5M6.5 4.5V3.5"
+        stroke={Colors.gray400}
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Green filled checkmark circle
+// ─────────────────────────────────────────────────────────────────────────────
+function CheckBadge() {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+      <Circle cx="8" cy="8" r="8" fill={Colors.green500} />
+      <Path
+        d="M4.5 8L6.8 10.3L11.5 5.5"
+        stroke="white"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+const POSITIVE_VALUES = new Set(['Included', 'Driver', 'Driver Only', 'Driver + Passenger', 'Driver + Family']);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Quote card with staggered entrance
 // ─────────────────────────────────────────────────────────────────────────────
 function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
@@ -240,7 +279,9 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
           {/* Top row: avg time + discount badge */}
           <View style={styles.cardTopRow}>
             <Text style={[styles.avgTime, quote.avgTime > 10 && styles.avgTimeWarning]}>
-              ⏱ Avg. linking time: ~{quote.avgTime} min
+              {'Avg linking time '}
+              <Text style={styles.avgTimeBracket}>{'<'}{quote.avgTime}{'>'}</Text>
+              {' minutes.'}
             </Text>
             {hasDiscount && (
               <View style={styles.discountBadge}>
@@ -277,32 +318,51 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
             </View>
           </View>
 
-          {/* Divider */}
-          <View style={styles.cardDivider} />
-
           {/* Features */}
           <View style={styles.featuresRow}>
             <View style={styles.feature}>
-              <Text style={styles.featureLabel}>Roadside Assist.</Text>
-              <Text style={[styles.featureValue, quote.roadsideAssist === 'Included' && styles.featureIncluded]}>
-                {quote.roadsideAssist}
-              </Text>
+              <View style={styles.featureLabelRow}>
+                <Text style={styles.featureLabel}>Roadside Assist.</Text>
+                <InfoIcon />
+              </View>
+              <View style={styles.featureValueRow}>
+                {POSITIVE_VALUES.has(quote.roadsideAssist) ? (
+                  <>
+                    <CheckBadge />
+                    <Text style={[styles.featureValue, styles.featureIncluded]}>{quote.roadsideAssist}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.featureValue}>{quote.roadsideAssist}</Text>
+                )}
+              </View>
             </View>
             <View style={styles.featureDivider} />
             <View style={styles.feature}>
-              <Text style={styles.featureLabel}>Personal Accident</Text>
-              <Text style={styles.featureValue}>{quote.personalAccident}</Text>
+              <View style={styles.featureLabelRow}>
+                <Text style={styles.featureLabel}>Personal Accident</Text>
+                <InfoIcon />
+              </View>
+              <View style={styles.featureValueRow}>
+                {POSITIVE_VALUES.has(quote.personalAccident) ? (
+                  <>
+                    <CheckBadge />
+                    <Text style={[styles.featureValue, styles.featureIncluded]}>{quote.personalAccident}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.featureValue}>{quote.personalAccident}</Text>
+                )}
+              </View>
             </View>
           </View>
 
           {/* Actions */}
           <View style={styles.cardActions}>
-            <PressableScale scaleTo={0.93} onPress={handleDetails} style={{ flex: 1 }}>
+            <PressableScale scaleTo={0.96} onPress={handleDetails} style={{ flex: 1 }}>
               <View style={styles.detailsBtn}>
                 <Text style={styles.detailsBtnText}>More details</Text>
               </View>
             </PressableScale>
-            <PressableScale scaleTo={0.93} onPress={handleSelect} style={{ flex: 1 }}>
+            <PressableScale scaleTo={0.96} onPress={handleSelect} style={{ flex: 1 }}>
               <View style={styles.selectBtn}>
                 <Text style={styles.selectBtnText}>Select</Text>
               </View>
@@ -380,9 +440,10 @@ function ShoryPlusSheet({ visible, onClose }: { visible: boolean; onClose: () =>
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 export default function QuoteListScreen({ navigation }: Props) {
-  const [activeFilter, setActiveFilter]     = useState<Quote['category']>('third-party');
+  const [activeFilter, setActiveFilter]       = useState<Quote['category']>('third-party');
   const [vehicleExpanded, setVehicleExpanded] = useState(false);
-  const [shoryPlusSheet, setShoryPlusSheet]  = useState(false);
+  const [shoryPlusSheet, setShoryPlusSheet]   = useState(false);
+  const [isScrolling, setIsScrolling]         = useState(false);
   const shoryPlusShown = useRef(false);
   const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -392,10 +453,11 @@ export default function QuoteListScreen({ navigation }: Props) {
     transform: [{ translateY: floatOffset.value }],
   }));
 
+
   // Auto-expand vehicle details for 4 seconds on mount
   useEffect(() => {
     setVehicleExpanded(true);
-    autoCloseTimer.current = setTimeout(() => setVehicleExpanded(false), 4000);
+    autoCloseTimer.current = setTimeout(() => setVehicleExpanded(false), 1000);
     // Entrance of floating bar
     floatOffset.value = withDelay(500, withSpring(0, { damping: 20, stiffness: 140 }));
     return () => {
@@ -403,12 +465,14 @@ export default function QuoteListScreen({ navigation }: Props) {
     };
   }, []);
 
-  // Scroll-based float bar visibility
+  // Scroll-based float bar + notch visibility
   const handleScrollBeginDrag = useCallback(() => {
+    setIsScrolling(true);
     floatOffset.value = withTiming(120, { duration: 200, easing: Easing.out(Easing.cubic) });
   }, []);
 
   const handleScrollEnd = useCallback(() => {
+    setIsScrolling(false);
     floatOffset.value = withSpring(0, { damping: 20, stiffness: 180 });
   }, []);
 
@@ -492,6 +556,9 @@ export default function QuoteListScreen({ navigation }: Props) {
 
       {/* ── Shory Plus info sheet ── */}
       <ShoryPlusSheet visible={shoryPlusSheet} onClose={() => setShoryPlusSheet(false)} />
+
+      {/* ── AI notch + full-page bottom sheet ── */}
+      <AINotchPanel hidden={vehicleExpanded || isScrolling || shoryPlusSheet} />
     </SafeAreaView>
   );
 }
@@ -565,25 +632,42 @@ const styles = StyleSheet.create({
 
   expandedContent: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
-  expandedRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap: 16,
+  detailsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.gray900,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-  expandedItem: { gap: 2 },
-  expandedLabel: { fontSize: 9, color: Colors.gray600, textTransform: 'uppercase', letterSpacing: 0.4 },
-  expandedValue: { fontSize: 13, fontWeight: '700', color: Colors.gray900 },
-  editVehicleBtn: {
-    marginLeft: 'auto' as any,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.brand600,
+  editVehicleText: { fontSize: 12, fontWeight: '600', color: Colors.brand600 },
+  editBelowBtn: {
+    alignSelf: 'flex-start',
+    paddingTop: 6,
+    paddingBottom: 4,
   },
-  editVehicleText: { fontSize: 12, fontWeight: '700', color: Colors.brand600 },
+  detailRow: {
+    flexDirection:    'row',
+    alignItems:       'center',
+    justifyContent:   'space-between',
+    paddingVertical:  6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray100,
+  },
+  detailRowLabel: {
+    fontSize: 12,
+    color: Colors.gray600,
+    flex: 1,
+  },
+  detailRowValue: {
+    fontSize: 12,
+    color: Colors.gray900,
+    textAlign: 'right',
+  },
+  detailRowValueBold: {
+    fontWeight: '700',
+  },
 
   // ── Promos ───────────────────────────────────────────────────────────────────
   promosRow: { paddingHorizontal: 16, paddingVertical: 10 },
@@ -604,22 +688,23 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.white,
     borderRadius:    16,
-    paddingHorizontal: 16,
-    paddingVertical:   14,
+    paddingHorizontal: 14,
+    paddingVertical:   12,
     gap: 12,
     shadowColor:    '#9b9b9b',
     shadowOffset:   { width: 0, height: 2 },
-    shadowOpacity:  0.13,
-    shadowRadius:   10,
-    elevation:      4,
+    shadowOpacity:  0.10,
+    shadowRadius:   8,
+    elevation:      3,
   },
   cardTopRow: {
     flexDirection:   'row',
     alignItems:      'center',
     justifyContent:  'space-between',
   },
-  avgTime:        { fontSize: 10, fontWeight: '500', color: Colors.gray700 },
+  avgTime:        { fontSize: 10, fontWeight: '500', color: Colors.gray600 },
   avgTimeWarning: { color: '#c08b0c' },
+  avgTimeBracket: { fontWeight: '700', color: Colors.gray900 },
   discountBadge: {
     backgroundColor: '#fff0e8',
     borderRadius:    6,
@@ -632,51 +717,50 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'space-between',
   },
-  insurerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  insurerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   insurerLogo: {
-    width: 44, height: 44, borderRadius: 12,
+    width: 36, height: 36, borderRadius: 10,
     borderWidth: 1, borderColor: Colors.gray200,
     backgroundColor: Colors.gray50,
     alignItems: 'center', justifyContent: 'center',
   },
-  insurerInitial: { fontSize: 18, fontWeight: '800', color: Colors.brand600 },
-  insurerName:    { fontSize: 14, fontWeight: '700', color: Colors.black, lineHeight: 18 },
-  insurerType:    { fontSize: 10, fontWeight: '500', color: Colors.gray700, marginTop: 2 },
-  priceBlock:     { alignItems: 'flex-end', gap: 1 },
+  insurerInitial: { fontSize: 15, fontWeight: '800', color: Colors.brand600 },
+  insurerName:    { fontSize: 13, fontWeight: '700', color: Colors.black, lineHeight: 17 },
+  insurerType:    { fontSize: 10, fontWeight: '500', color: Colors.gray700, marginTop: 1 },
+  priceBlock:     { alignItems: 'flex-end', gap: 0 },
   originalRow:    { flexDirection: 'row', alignItems: 'center' },
-  aedTiny:        { fontSize: 10, color: Colors.gray500 },
-  originalPrice:  { fontSize: 12, fontWeight: '700', color: Colors.gray500, textDecorationLine: 'line-through' },
+  aedTiny:        { fontSize: 9, color: Colors.gray500 },
+  originalPrice:  { fontSize: 11, fontWeight: '700', color: Colors.gray500, textDecorationLine: 'line-through' },
   currentRow:     { flexDirection: 'row', alignItems: 'baseline' },
-  aedMid:         { fontSize: 11, fontWeight: '600', color: Colors.black },
-  currentPrice:   { fontSize: 24, fontWeight: '800', color: Colors.black, letterSpacing: -0.5 },
+  aedMid:         { fontSize: 10, fontWeight: '600', color: Colors.black },
+  currentPrice:   { fontSize: 20, fontWeight: '800', color: Colors.black, letterSpacing: -0.5 },
   installment:    { fontSize: 9, color: Colors.gray700 },
   cardDivider:    { height: 1, backgroundColor: Colors.gray100 },
   featuresRow: {
-    flexDirection:   'row',
-    backgroundColor: Colors.gray50,
-    borderRadius:    10,
-    paddingHorizontal: 12,
-    paddingVertical:   10,
+    flexDirection: 'row',
     gap: 12,
   },
   feature:         { flex: 1, gap: 3 },
   featureDivider:  { width: 1, backgroundColor: Colors.gray200 },
+  featureLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   featureLabel:    { fontSize: 10, color: Colors.gray600 },
-  featureValue:    { fontSize: 13, fontWeight: '700', color: Colors.gray900 },
+  featureValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  featureValue:    { fontSize: 12, fontWeight: '700', color: Colors.gray900 },
   featureIncluded: { color: Colors.green500 },
   cardActions:     { flexDirection: 'row', gap: 8 },
   detailsBtn: {
-    height: 38, borderRadius: 10,
+    height: 28, borderRadius: 8,
     borderWidth: 1.5, borderColor: '#c5d9ff',
     alignItems: 'center', justifyContent: 'center',
   },
-  detailsBtnText: { fontSize: 12, fontWeight: '700', color: Colors.brand600 },
+  detailsBtnText: { fontSize: 11, fontWeight: '700', color: Colors.brand600 },
   selectBtn: {
-    height: 38, borderRadius: 10,
+    height: 28, borderRadius: 8,
     backgroundColor: Colors.brand600,
     alignItems: 'center', justifyContent: 'center',
   },
-  selectBtnText: { fontSize: 12, fontWeight: '700', color: Colors.white, letterSpacing: 0.2 },
+  selectBtnText: { fontSize: 11, fontWeight: '700', color: Colors.white, letterSpacing: 0.2 },
+
 
   // ── Floating bar ─────────────────────────────────────────────────────────────
   floatingWrap: {

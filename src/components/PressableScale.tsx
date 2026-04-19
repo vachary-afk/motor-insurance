@@ -46,8 +46,9 @@ export default function PressableScale({
       onPressIn={disabled ? undefined : onPressIn}
       onPressOut={onPressOut}
       disabled={disabled}
+      style={style}
     >
-      <Animated.View style={[animStyle, style]}>{children}</Animated.View>
+      <Animated.View style={[animStyle, { flex: 1 }]}>{children}</Animated.View>
     </Pressable>
   );
 }

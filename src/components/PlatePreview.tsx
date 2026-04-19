@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,7 +9,6 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/colors';
 
 export type PlateZone = 'emirate' | 'code' | 'number';
@@ -32,15 +32,16 @@ export const PLATE_DIVIDER_WIDTH = 1;
 const PLATE_BORDER = 4;
 const PLATE_HEIGHT = 60;
 
-// Semicircle (11px wide) left position per zone — centered on each zone
-// code center:    PLATE_BORDER + CODE_WIDTH/2           = 4 + 31.5 = 35.5 → left = 30
-// emirate center: PLATE_BORDER + CODE+DIV + EMI/2       = 4+64+40.5 = 108.5 → left = 103
+// SVG indicator (32px wide) left position per zone — centered on each zone
+// code center:    PLATE_BORDER + CODE_WIDTH/2           = 4 + 31.5 = 35.5 → left = 19.5
+// emirate center: PLATE_BORDER + CODE+DIV + EMI/2       = 4+64+40.5 = 108.5 → left = 92.5
 // number center:  PLATE_BORDER + CODE+DIV+EMI+DIV + remaining/2
-//                 remaining = 324-4-63-1-81-1-4 = 170  → center = 4+145+85 = 234 → left = 228.5
+//                 remaining = 324-4-63-1-81-1-4 = 170  → center = 4+145+85 = 234 → left = 218
+const INDICATOR_W = 32;
 const ZONE_SEMI_X: Record<PlateZone, number> = {
-  code:    30,
-  emirate: 103,
-  number:  228.5,
+  code:    19.5,
+  emirate: 92.5,
+  number:  218,
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -195,12 +196,12 @@ export default function PlatePreview({
         <View style={styles.innerShadow} pointerEvents="none" />
       </View>
 
-      {/* ── Semicircle indicator — sits on the plate's bottom border ── */}
+      {/* ── SVG indicator — sits just above the bottom border ── */}
       <Animated.View style={[styles.semiContainer, semiStyle]} pointerEvents="none">
-        <Svg width={11} height={6} viewBox="0 0 11 6" fill="none">
+        <Svg width={32} height={2} viewBox="0 0 32 2" fill="none">
           <Path
-            d="M11 5.5C11 4.04131 10.4205 2.64236 9.38909 1.61091C8.35764 0.579463 6.95869 1.10128e-07 5.5 0C4.04131 -1.10128e-07 2.64236 0.579462 1.61091 1.61091C0.579463 2.64236 2.20256e-07 4.04131 0 5.5L5.5 5.5H11Z"
-            fill="#4A4D5A"
+            d="M0 2C0 0.895431 0.895431 0 2 0H30C31.1046 0 32 0.895431 32 2V2H0V2Z"
+            fill="#1D68FF"
           />
         </Svg>
       </Animated.View>
@@ -237,11 +238,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand50,
   },
 
-  // Semicircle sits on the plate's bottom border:
-  // top = PLATE_HEIGHT - PLATE_BORDER = 56, so flat edge is at ~60 (border bottom)
+  // SVG indicator — sits just above the bottom border
   semiContainer: {
     position: 'absolute',
-    top:      PLATE_HEIGHT - PLATE_BORDER,   // 56 — dome peak is here, flat edge at ~62
+    top:      PLATE_HEIGHT - PLATE_BORDER - 2,   // 54 — 2px above the border top edge
   },
 
   divider: {
