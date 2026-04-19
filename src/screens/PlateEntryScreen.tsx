@@ -170,6 +170,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [codeInputValue, setCodeInputValue] = useState('');
   const [plateNumber, setPlateNumber] = useState<string>('');
+  const [showIndicator, setShowIndicator] = useState(true);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sheet + scrim entrance
@@ -250,10 +251,16 @@ export default function PlateEntryScreen({ navigation }: Props) {
 
   const handleZonePress = useCallback((zone: PlateZone) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
+    setShowIndicator(true);
     switchZone(zone);
   }, [switchZone]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
+
+  // Hide indicator when all fields have minimum input; restore on zone tap
+  useEffect(() => {
+    if (canContinue) setShowIndicator(false);
+  }, [canContinue]);
 
   const handleContinue = useCallback(() => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -302,6 +309,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
             emirate={selectedEmirate}
             activeZone={activeZone}
             onZonePress={handleZonePress}
+            showIndicator={showIndicator}
           />
           <Animated.Text style={[styles.zoneLabel, labelStyle]}>
             {ZONE_LABELS[activeZone]}

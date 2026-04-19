@@ -8,11 +8,12 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/colors';
 
 export type PlateZone = 'emirate' | 'code' | 'number';
 
-// ── Asset map ───────────────────────────────────────────────────────────────
+// ── Asset map ────────────────────────────────────────────────────────────────
 const EMIRATE_IMAGES: Record<string, ReturnType<typeof require>> = {
   'Dubai':          require('../../assets/emirates/image 1.png'),
   'Abu Dhabi':      require('../../assets/emirates/image 2.png'),
@@ -23,27 +24,33 @@ const EMIRATE_IMAGES: Record<string, ReturnType<typeof require>> = {
   'Fujairah':       require('../../assets/emirates/image 7.png'),
 };
 
-// ── Exported layout constants ─────────────────────────────────────────────────
+// ── Layout constants ──────────────────────────────────────────────────────────
 export const PLATE_TOTAL_WIDTH   = 324;
 export const PLATE_CODE_WIDTH    = 63;
 export const PLATE_EMIRATE_WIDTH = 81;
 export const PLATE_DIVIDER_WIDTH = 1;
+const PLATE_BORDER = 4;
+const PLATE_HEIGHT = 60;
 
-// Triangle indicator X positions (center of each zone minus half triangle width)
-// code center: 63/2=31.5, emirate center: 63+1+81/2=104.5, number center: 63+1+81+1+178/2=235
-const ZONE_TRIANGLE_X: Record<PlateZone, number> = {
-  code:    31.5 - 6.5,   // 25
-  emirate: 104.5 - 6.5,  // 98
-  number:  235 - 6.5,    // 228.5
+// Semicircle (11px wide) left position per zone — centered on each zone
+// code center:    PLATE_BORDER + CODE_WIDTH/2           = 4 + 31.5 = 35.5 → left = 30
+// emirate center: PLATE_BORDER + CODE+DIV + EMI/2       = 4+64+40.5 = 108.5 → left = 103
+// number center:  PLATE_BORDER + CODE+DIV+EMI+DIV + remaining/2
+//                 remaining = 324-4-63-1-81-1-4 = 170  → center = 4+145+85 = 234 → left = 228.5
+const ZONE_SEMI_X: Record<PlateZone, number> = {
+  code:    30,
+  emirate: 103,
+  number:  228.5,
 };
 
-// ── Props ────────────────────────────────────────────────────────────────────
+// ── Props ─────────────────────────────────────────────────────────────────────
 type Props = {
-  plateCode:   string | null;
-  plateNumber: string;
-  emirate:     string | null;
-  activeZone:  PlateZone;
-  onZonePress: (zone: PlateZone) => void;
+  plateCode:     string | null;
+  plateNumber:   string;
+  emirate:       string | null;
+  activeZone:    PlateZone;
+  onZonePress:   (zone: PlateZone) => void;
+  showIndicator?: boolean;   // hide when all fields complete
 };
 
 // ── Tappable zone wrapper ─────────────────────────────────────────────────────
@@ -55,7 +62,7 @@ type ZoneSectionProps = {
 };
 
 function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
-  const scale = useSharedValue(1);
+  const scale     = useSharedValue(1);
   const bgOpacity = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
@@ -65,52 +72,56 @@ function ZoneSection({ active, onPress, style, children }: ZoneSectionProps) {
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     flex: 1,
-    alignItems: 'center' as const,
+    alignItems:     'center' as const,
     justifyContent: 'center' as const,
   }));
 
-  const activeOverlayStyle = useAnimatedStyle(() => ({
-    opacity: bgOpacity.value,
-  }));
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: bgOpacity.value }));
 
   return (
     <Pressable
       onPressIn={() => { scale.value = withSpring(0.91, { damping: 12, stiffness: 400 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
+      onPressOut={() => { scale.value = withSpring(1,    { damping: 10, stiffness: 200 }); }}
       onPress={onPress}
       style={style}
     >
-      {/* Active bg overlay */}
-      <Animated.View style={[StyleSheet.absoluteFill, styles.activeOverlay, activeOverlayStyle]} />
-      <Animated.View style={animStyle}>
-        {children}
-      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.activeOverlay, overlayStyle]} />
+      <Animated.View style={animStyle}>{children}</Animated.View>
     </Pressable>
   );
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function PlatePreview({
   plateCode, plateNumber, emirate, activeZone, onZonePress,
+  showIndicator = true,
 }: Props) {
-  const hasEmirate = emirate !== null;
-  const isAbuDhabi = emirate === 'Abu Dhabi';
-  const imgSource  = emirate ? EMIRATE_IMAGES[emirate] : null;
+  const hasEmirate   = emirate !== null;
+  const isAbuDhabi   = emirate === 'Abu Dhabi';
+  const imgSource    = emirate ? EMIRATE_IMAGES[emirate] : null;
   const numberFilled = plateNumber.length > 0;
 
-  // Sliding triangle indicator
-  const triangleLeft = useSharedValue(ZONE_TRIANGLE_X[activeZone]);
+  // ── Sliding semicircle ───────────────────────────────────────────────────
+  const semiLeft    = useSharedValue(ZONE_SEMI_X[activeZone]);
+  const semiOpacity = useSharedValue(1);
+
   useEffect(() => {
-    triangleLeft.value = withSpring(ZONE_TRIANGLE_X[activeZone], {
-      damping: 22, stiffness: 220,
-    });
+    semiLeft.value = withSpring(ZONE_SEMI_X[activeZone], { damping: 22, stiffness: 220 });
   }, [activeZone]);
 
-  const triangleStyle = useAnimatedStyle(() => ({
-    left: triangleLeft.value,
+  useEffect(() => {
+    semiOpacity.value = withTiming(showIndicator ? 1 : 0, {
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [showIndicator]);
+
+  const semiStyle = useAnimatedStyle(() => ({
+    left:    semiLeft.value,
+    opacity: semiOpacity.value,
   }));
 
-  // Number entry micro-interaction: ease-out cubic-bezier(0.22, 1, 0.36, 1)
+  // ── Number digit micro-interaction ───────────────────────────────────────
   const numScale = useSharedValue(1);
   useEffect(() => {
     if (plateNumber.length > 0) {
@@ -127,166 +138,168 @@ export default function PlatePreview({
     transform: [{ scale: numScale.value }],
   }));
 
-  // Code zone colours
+  // ── Zone colours ─────────────────────────────────────────────────────────
   const codeBg    = hasEmirate && isAbuDhabi ? Colors.red500 : Colors.white;
   const codeColor = hasEmirate && isAbuDhabi
     ? Colors.white
     : hasEmirate ? Colors.black : Colors.gray300;
-
-  // Number zone bg
-  const numberBg = numberFilled ? Colors.white : Colors.gray100;
+  const numberBg  = numberFilled ? Colors.white : Colors.gray100;
 
   return (
-    <View style={styles.plate}>
+    // Wrapper allows semicircle to overflow outside the plate
+    <View style={styles.wrapper}>
 
-      {/* Code zone */}
-      <ZoneSection
-        active={activeZone === 'code'}
-        onPress={() => onZonePress('code')}
-        style={[styles.codeSection, { backgroundColor: codeBg }]}
-      >
-        <Text style={[styles.codeText, { color: codeColor }]} numberOfLines={1} adjustsFontSizeToFit>
-          {plateCode !== null ? plateCode : '0'}
-        </Text>
-      </ZoneSection>
+      {/* ── Plate (overflow:hidden to clip zone overlays + border radius) ── */}
+      <View style={styles.plate}>
 
-      <View style={styles.divider} />
-
-      {/* Emirate zone */}
-      <ZoneSection
-        active={activeZone === 'emirate'}
-        onPress={() => onZonePress('emirate')}
-        style={styles.emirateSection}
-      >
-        {imgSource ? (
-          <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
-        ) : (
-          <View style={styles.emiratePlaceholder}>
-            <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
-          </View>
-        )}
-      </ZoneSection>
-
-      <View style={styles.divider} />
-
-      {/* Number zone */}
-      <ZoneSection
-        active={activeZone === 'number'}
-        onPress={() => onZonePress('number')}
-        style={[styles.numberSection, { backgroundColor: numberBg }]}
-      >
-        <Animated.View style={numAnimStyle}>
-          <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
-            {numberFilled ? plateNumber : '00000'}
+        <ZoneSection
+          active={activeZone === 'code'}
+          onPress={() => onZonePress('code')}
+          style={[styles.codeSection, { backgroundColor: codeBg }]}
+        >
+          <Text style={[styles.codeText, { color: codeColor }]} numberOfLines={1} adjustsFontSizeToFit>
+            {plateCode !== null ? plateCode : '0'}
           </Text>
-        </Animated.View>
-      </ZoneSection>
+        </ZoneSection>
 
-      {/* ── Sliding triangle indicator inside plate ── */}
-      <Animated.View style={[styles.zoneTriangle, triangleStyle]} pointerEvents="none" />
+        <View style={styles.divider} />
 
-      {/* Inner shadow overlay */}
-      <View style={styles.innerShadow} pointerEvents="none" />
+        <ZoneSection
+          active={activeZone === 'emirate'}
+          onPress={() => onZonePress('emirate')}
+          style={styles.emirateSection}
+        >
+          {imgSource ? (
+            <Image source={imgSource} style={styles.emirateImage} resizeMode="contain" />
+          ) : (
+            <View style={styles.emiratePlaceholder}>
+              <Text style={styles.emiratePlaceholderText}>الإمارات{'\n'}U.A.E AD</Text>
+            </View>
+          )}
+        </ZoneSection>
+
+        <View style={styles.divider} />
+
+        <ZoneSection
+          active={activeZone === 'number'}
+          onPress={() => onZonePress('number')}
+          style={[styles.numberSection, { backgroundColor: numberBg }]}
+        >
+          <Animated.View style={numAnimStyle}>
+            <Text style={[styles.numberText, numberFilled && styles.numberFilled]}>
+              {numberFilled ? plateNumber : '00000'}
+            </Text>
+          </Animated.View>
+        </ZoneSection>
+
+        <View style={styles.innerShadow} pointerEvents="none" />
+      </View>
+
+      {/* ── Semicircle indicator — sits on the plate's bottom border ── */}
+      <Animated.View style={[styles.semiContainer, semiStyle]} pointerEvents="none">
+        <Svg width={11} height={6} viewBox="0 0 11 6" fill="none">
+          <Path
+            d="M11 5.5C11 4.04131 10.4205 2.64236 9.38909 1.61091C8.35764 0.579463 6.95869 1.10128e-07 5.5 0C4.04131 -1.10128e-07 2.64236 0.579462 1.61091 1.61091C0.579463 2.64236 2.20256e-07 4.04131 0 5.5L5.5 5.5H11Z"
+            fill="#4A4D5A"
+          />
+        </Svg>
+      </Animated.View>
+
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // Outer wrapper — does NOT clip, so semicircle can overlap the plate border
+  wrapper: {
+    width:    PLATE_TOTAL_WIDTH,
+    height:   PLATE_HEIGHT,   // same height as plate; semicircle overflows below
+  },
+
   plate: {
-    width: PLATE_TOTAL_WIDTH,
-    height: 60,
-    borderWidth: 4,
-    borderColor: Colors.gray800,
-    borderRadius: 8,
-    flexDirection: 'row',
+    width:           PLATE_TOTAL_WIDTH,
+    height:          PLATE_HEIGHT,
+    borderWidth:     PLATE_BORDER,
+    borderColor:     Colors.gray800,
+    borderRadius:    8,
+    flexDirection:   'row',
     backgroundColor: Colors.white,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    overflow:        'hidden',
+    shadowColor:     '#000',
+    shadowOffset:    { width: 0, height: 3 },
+    shadowOpacity:   0.15,
+    shadowRadius:    8,
+    elevation:       5,
   },
 
   activeOverlay: {
     backgroundColor: Colors.brand50,
   },
 
-  zoneTriangle: {
+  // Semicircle sits on the plate's bottom border:
+  // top = PLATE_HEIGHT - PLATE_BORDER = 56, so flat edge is at ~60 (border bottom)
+  semiContainer: {
     position: 'absolute',
-    bottom: 3,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6.5,
-    borderRightWidth: 6.5,
-    borderBottomWidth: 7,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: Colors.brand600,
-    zIndex: 10,
+    top:      PLATE_HEIGHT - PLATE_BORDER,   // 56 — dome peak is here, flat edge at ~62
   },
 
   divider: {
-    width: PLATE_DIVIDER_WIDTH,
+    width:           PLATE_DIVIDER_WIDTH,
     backgroundColor: Colors.gray300,
   },
 
-  // Code
   codeSection: {
     width: PLATE_CODE_WIDTH,
   },
   codeText: {
-    fontSize: 28,
+    fontSize:   28,
     fontWeight: '800',
   },
 
-  // Emirate
   emirateSection: {
     width: PLATE_EMIRATE_WIDTH,
   },
   emirateImage: {
-    width: PLATE_EMIRATE_WIDTH - 8,
+    width:  PLATE_EMIRATE_WIDTH - 8,
     height: 46,
   },
   emiratePlaceholder: {
-    alignItems: 'center',
+    alignItems:     'center',
     justifyContent: 'center',
   },
   emiratePlaceholderText: {
-    fontSize: 7,
-    color: Colors.gray400,
-    textAlign: 'center',
+    fontSize:   7,
+    color:      Colors.gray400,
+    textAlign:  'center',
     lineHeight: 10,
-    opacity: 0.4,
+    opacity:    0.4,
   },
 
-  // Number
   numberSection: {
     flex: 1,
   },
   numberText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.gray300,
+    fontSize:      28,
+    fontWeight:    '800',
+    color:         Colors.gray300,
     letterSpacing: 3,
   },
   numberFilled: {
     color: Colors.black,
   },
 
-  // Inner shadow (top edge)
   innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 6,
+    position:        'absolute',
+    top:             0,
+    left:            0,
+    right:           0,
+    height:          6,
     backgroundColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 0,
+    shadowColor:     '#000',
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.25,
+    shadowRadius:    4,
+    elevation:       0,
   },
 });
