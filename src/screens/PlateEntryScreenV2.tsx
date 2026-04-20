@@ -311,10 +311,8 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
     setSelectedCode(null);
     setPlateNumber('');
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => {
-      switchZone('code');
-      setTimeout(openCodeSheet, 120);
-    }, 380);
+    switchZone('code');
+    advanceTimer.current = setTimeout(openCodeSheet, 80);
   }, [switchZone, openCodeSheet]);
 
   // ── Code select (from sheet) ────────────────────────────────────────────
@@ -323,10 +321,8 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
     setSelectedCode(code);
     closeCodeSheet();
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => {
-      switchZone('number');
-      numberInputRef.current?.focus();
-    }, 400);
+    // Switch to number zone immediately; autoFocus on TextInput handles keyboard
+    switchZone('number');
   }, [closeCodeSheet, switchZone]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
@@ -334,6 +330,14 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
   useEffect(() => {
     if (canContinue) setShowIndicator(false);
   }, [canContinue]);
+
+  // Focus the number input whenever the number zone becomes active
+  useEffect(() => {
+    if (activeZone === 'number') {
+      const t = setTimeout(() => numberInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [activeZone]);
 
   const handleContinue = useCallback(() => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -425,11 +429,6 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
                     </Text>
                     <Text style={styles.codePickerChevron}>›</Text>
                   </Pressable>
-                  {selectedCode && (
-                    <Text style={styles.codeSelectedHint}>
-                      Code <Text style={{ fontWeight: '700', color: Colors.brand600 }}>{selectedCode}</Text> selected — tap to change
-                    </Text>
-                  )}
                 </View>
               )}
 
@@ -730,7 +729,7 @@ const styles = StyleSheet.create({
   toastText: { fontSize: 13, fontWeight: '600', color: '#92400E', flex: 1 },
 
   // ── Code bottom sheet ──────────────────────────────────────────────────
-  codeSheetScrim: { backgroundColor: '#000', opacity: 0.45 },
+  codeSheetScrim: { backgroundColor: 'rgba(0,0,0,0.45)' },
   codeSheet: {
     position: 'absolute',
     bottom: 0,
