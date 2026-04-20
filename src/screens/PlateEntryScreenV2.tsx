@@ -450,14 +450,6 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
                     accessible={false}
                     importantForAccessibility="no"
                   />
-                  <View style={styles.numberPrompt}>
-                    <Text style={styles.numberPromptIcon}>🔢</Text>
-                    <Text style={styles.numberPromptText}>
-                      {plateNumber.length > 0
-                        ? `${plateNumber} — tap plate to keep typing`
-                        : 'Type your plate number using the keyboard'}
-                    </Text>
-                  </View>
                 </View>
               )}
 
@@ -691,26 +683,6 @@ const styles = StyleSheet.create({
     height: 1,
     opacity: 0,
     left: -999,
-  },
-  numberPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: Colors.brand50,
-    borderWidth: 1.5,
-    borderColor: Colors.brand100,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignSelf: 'stretch',
-  },
-  numberPromptIcon: { fontSize: 20 },
-  numberPromptText: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.brand600,
-    fontWeight: '500',
-    lineHeight: 20,
   },
 
   // Footer
