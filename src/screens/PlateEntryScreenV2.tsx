@@ -297,7 +297,6 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
       setTimeout(openCodeSheet, 120);
     } else if (zone === 'number') {
       switchZone('number');
-      setTimeout(() => numberInputRef.current?.focus(), 60);
     } else {
       switchZone(zone);
     }
@@ -322,10 +321,7 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
     setSelectedCode(code);
     closeCodeSheet();
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => {
-      switchZone('number');
-      setTimeout(() => numberInputRef.current?.focus(), 60);
-    }, 400);
+    advanceTimer.current = setTimeout(() => switchZone('number'), 400);
   }, [closeCodeSheet, switchZone]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
@@ -435,7 +431,7 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
               {/* ── Number zone — keyboard triggered from plate tap ── */}
               {activeZone === 'number' && (
                 <View style={styles.numberZoneWrap}>
-                  {/* Invisible TextInput — keyboard trigger only, input shown on plate */}
+                  {/* Invisible TextInput — auto-focuses on mount to pop native keyboard */}
                   <TextInput
                     ref={numberInputRef}
                     style={styles.hiddenInput}
@@ -447,6 +443,8 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
                     keyboardType="number-pad"
                     maxLength={5}
                     returnKeyType="done"
+                    autoFocus
+                    caretHidden
                     accessible={false}
                     importantForAccessibility="no"
                   />
@@ -682,7 +680,8 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
     opacity: 0,
-    left: -999,
+    top: 0,
+    left: 0,
   },
 
   // Footer
