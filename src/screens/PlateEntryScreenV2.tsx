@@ -297,6 +297,8 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
       setTimeout(openCodeSheet, 120);
     } else if (zone === 'number') {
       switchZone('number');
+      // Must call focus() synchronously within the tap handler for mobile browsers
+      numberInputRef.current?.focus();
     } else {
       switchZone(zone);
     }
@@ -321,7 +323,10 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
     setSelectedCode(code);
     closeCodeSheet();
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => switchZone('number'), 400);
+    advanceTimer.current = setTimeout(() => {
+      switchZone('number');
+      numberInputRef.current?.focus();
+    }, 400);
   }, [closeCodeSheet, switchZone]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
