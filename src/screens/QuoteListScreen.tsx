@@ -8,6 +8,7 @@ import {
   Image,
   Pressable,
   Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,11 +21,12 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { CaretDown, Info, CheckCircle, Export } from 'phosphor-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
+import INSURER_LOGOS from '../constants/insurerLogos';
 import NavBar from '../components/NavBar';
 import PressableScale from '../components/PressableScale';
 import AINotchPanel from '../components/AINotchPanel';
@@ -48,37 +50,59 @@ type Quote = {
 };
 
 const QUOTES: Quote[] = [
-  { id: '1', insurer: 'RAK',   type: 'Third party',  originalPrice: 580,  price: 480,  roadsideAssist: '+ AED 10',  personalAccident: 'Driver',           avgTime: 5,  category: 'third-party' },
-  { id: '2', insurer: 'AXA',   type: 'Third party',  originalPrice: 610,  price: 510,  roadsideAssist: 'Included',  personalAccident: 'Driver',           avgTime: 3,  category: 'third-party' },
-  { id: '3', insurer: 'RSA',   type: 'Third party',  originalPrice: 620,  price: 520,  roadsideAssist: '+ AED 10',  personalAccident: 'Driver',           avgTime: 8,  category: 'third-party' },
-  { id: '4', insurer: 'ADNIC', type: 'Third party',  originalPrice: 880,  price: 780,  roadsideAssist: '+ AED 10',  personalAccident: 'Driver',           avgTime: 6,  category: 'third-party' },
-  { id: '5', insurer: 'Sukoon',type: 'Third Party',  originalPrice: null, price: 534,  roadsideAssist: '+ AED 10',  personalAccident: 'Driver Only',      avgTime: 12, category: 'third-party' },
-  { id: '6', insurer: 'RAK',   type: 'Shory Plus',   originalPrice: 750,  price: 620,  roadsideAssist: 'Included',  personalAccident: 'Driver + Passenger',avgTime: 4, category: 'shory-plus' },
-  { id: '7', insurer: 'AXA',   type: 'Comprehensive',originalPrice: 1800, price: 1500, roadsideAssist: 'Included',  personalAccident: 'Driver + Family',  avgTime: 5,  category: 'comprehensive' },
+  // ── Third Party ──────────────────────────────────────────────────────────────
+  { id:  '1', insurer: 'RAK',               type: 'Third Party',  originalPrice: 580,  price: 480,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 5,  category: 'third-party' },
+  { id:  '2', insurer: 'AXA',               type: 'Third Party',  originalPrice: 610,  price: 510,  roadsideAssist: 'Included', personalAccident: 'Driver',            avgTime: 3,  category: 'third-party' },
+  { id:  '3', insurer: 'RSA',               type: 'Third Party',  originalPrice: 620,  price: 520,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 8,  category: 'third-party' },
+  { id:  '4', insurer: 'Sukoon',            type: 'Third Party',  originalPrice: null, price: 534,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 12, category: 'third-party' },
+  { id:  '5', insurer: 'ADNIC',             type: 'Third Party',  originalPrice: 650,  price: 545,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 6,  category: 'third-party' },
+  { id:  '6', insurer: 'NGI',               type: 'Third Party',  originalPrice: 658,  price: 558,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 7,  category: 'third-party' },
+  { id:  '7', insurer: 'Orient',            type: 'Third Party',  originalPrice: null, price: 572,  roadsideAssist: 'Included', personalAccident: 'Driver Only',       avgTime: 9,  category: 'third-party' },
+  { id:  '8', insurer: 'Dubai',             type: 'Third Party',  originalPrice: 680,  price: 585,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 10, category: 'third-party' },
+  { id:  '9', insurer: 'Watania',           type: 'Third Party',  originalPrice: null, price: 598,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 11, category: 'third-party' },
+  { id: '10', insurer: 'Salama',            type: 'Third Party',  originalPrice: 712,  price: 612,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 15, category: 'third-party' },
+  { id: '11', insurer: 'Fidelity',          type: 'Third Party',  originalPrice: null, price: 628,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 14, category: 'third-party' },
+  { id: '12', insurer: 'Orient Takaful',    type: 'Third Party',  originalPrice: 738,  price: 642,  roadsideAssist: 'Included', personalAccident: 'Driver',            avgTime: 19, category: 'third-party' },
+  { id: '13', insurer: 'Qatar',             type: 'Third Party',  originalPrice: null, price: 655,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 16, category: 'third-party' },
+  { id: '14', insurer: 'AFNIC',             type: 'Third Party',  originalPrice: 768,  price: 668,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 22, category: 'third-party' },
+  { id: '15', insurer: 'Adamjee Insurance', type: 'Third Party',  originalPrice: null, price: 682,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 13, category: 'third-party' },
+  { id: '16', insurer: 'Al Ain',            type: 'Third Party',  originalPrice: 793,  price: 698,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 18, category: 'third-party' },
+  { id: '17', insurer: 'Union',             type: 'Third Party',  originalPrice: null, price: 715,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 20, category: 'third-party' },
+  { id: '18', insurer: 'AWNIC',             type: 'Third Party',  originalPrice: 827,  price: 728,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 25, category: 'third-party' },
+  { id: '19', insurer: 'Insurance House',   type: 'Third Party',  originalPrice: null, price: 745,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 28, category: 'third-party' },
+  { id: '20', insurer: 'ADNTC',             type: 'Third Party',  originalPrice: 856,  price: 762,  roadsideAssist: '+ AED 10', personalAccident: 'Driver',            avgTime: 17, category: 'third-party' },
+  { id: '21', insurer: 'Metaq',             type: 'Third Party',  originalPrice: null, price: 780,  roadsideAssist: '+ AED 10', personalAccident: 'Driver Only',       avgTime: 30, category: 'third-party' },
+
+  // ── Shory Plus ───────────────────────────────────────────────────────────────
+  { id: '22', insurer: 'RAK',               type: 'Shory Plus',   originalPrice: 748,  price: 620,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 4,  category: 'shory-plus' },
+  { id: '23', insurer: 'AXA',               type: 'Shory Plus',   originalPrice: 782,  price: 648,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 3,  category: 'shory-plus' },
+  { id: '24', insurer: 'RSA',               type: 'Shory Plus',   originalPrice: null, price: 675,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 8,  category: 'shory-plus' },
+  { id: '25', insurer: 'ADNIC',             type: 'Shory Plus',   originalPrice: 826,  price: 710,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 6,  category: 'shory-plus' },
+  { id: '26', insurer: 'Sukoon',            type: 'Shory Plus',   originalPrice: null, price: 745,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 12, category: 'shory-plus' },
+  { id: '27', insurer: 'Orient',            type: 'Shory Plus',   originalPrice: 897,  price: 780,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 9,  category: 'shory-plus' },
+  { id: '28', insurer: 'NGI',               type: 'Shory Plus',   originalPrice: null, price: 815,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 7,  category: 'shory-plus' },
+  { id: '29', insurer: 'Salama',            type: 'Shory Plus',   originalPrice: 966,  price: 850,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 15, category: 'shory-plus' },
+  { id: '30', insurer: 'Dubai',             type: 'Shory Plus',   originalPrice: null, price: 888,  roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 10, category: 'shory-plus' },
+  { id: '31', insurer: 'Orient Takaful',    type: 'Shory Plus',   originalPrice: 1058, price: 920,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 19, category: 'shory-plus' },
+  { id: '32', insurer: 'Qatar',             type: 'Shory Plus',   originalPrice: null, price: 955,  roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 16, category: 'shory-plus' },
+
+  // ── Comprehensive ─────────────────────────────────────────────────────────────
+  { id: '33', insurer: 'AXA',               type: 'Comprehensive',originalPrice: 1807, price: 1500, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 5,  category: 'comprehensive' },
+  { id: '34', insurer: 'RSA',               type: 'Comprehensive',originalPrice: null, price: 1620, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 8,  category: 'comprehensive' },
+  { id: '35', insurer: 'ADNIC',             type: 'Comprehensive',originalPrice: 2011, price: 1750, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 6,  category: 'comprehensive' },
+  { id: '36', insurer: 'RAK',               type: 'Comprehensive',originalPrice: null, price: 1840, roadsideAssist: 'Included', personalAccident: 'Driver + Passenger', avgTime: 4,  category: 'comprehensive' },
+  { id: '37', insurer: 'Qatar',             type: 'Comprehensive',originalPrice: 2175, price: 1850, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 16, category: 'comprehensive' },
+  { id: '38', insurer: 'Union',             type: 'Comprehensive',originalPrice: null, price: 1980, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 20, category: 'comprehensive' },
+  { id: '39', insurer: 'NGI',               type: 'Comprehensive',originalPrice: 2300, price: 2100, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 7,  category: 'comprehensive' },
+  { id: '40', insurer: 'Dubai',             type: 'Comprehensive',originalPrice: null, price: 2250, roadsideAssist: 'Included', personalAccident: 'Driver + Family',    avgTime: 10, category: 'comprehensive' },
 ];
 
 const FILTER_TABS: { label: string; sub: string; value: Quote['category'] }[] = [
   { label: 'Third Party',   sub: 'From AED 480',   value: 'third-party' },
-  { label: 'Shory Plus',    sub: 'From AED 585',   value: 'shory-plus' },
-  { label: 'Comprehensive', sub: 'From AED 1,200', value: 'comprehensive' },
+  { label: 'Shory Plus',    sub: 'From AED 620',   value: 'shory-plus' },
+  { label: 'Comprehensive', sub: 'From AED 1,500', value: 'comprehensive' },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Chevron icon
-// ─────────────────────────────────────────────────────────────────────────────
-function ChevronIcon({ up, color = Colors.brand600, size = 14 }: { up: boolean; color?: string; size?: number }) {
-  return (
-    <Svg width={size} height={size * 0.65} viewBox="0 0 14 9" fill="none">
-      <Path
-        d={up ? 'M1 8L7 2L13 8' : 'M1 1L7 7L13 1'}
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Vehicle details strip (auto-expand 4s, tap image/chevron to toggle)
@@ -130,7 +154,7 @@ function VehicleStrip({ expanded, onToggle }: { expanded: boolean; onToggle: () 
         {/* Chevron replaces "Edit" */}
         <Pressable onPress={onToggle} hitSlop={12} style={styles.chevronBtn}>
           <Animated.View style={chevStyle}>
-            <ChevronIcon up={false} color={Colors.brand600} size={16} />
+            <CaretDown size={16} color={Colors.brand600} />
           </Animated.View>
         </Pressable>
       </View>
@@ -167,17 +191,19 @@ function FilterBar({
   const [barWidth, setBarWidth] = useState(0);
   const activeIdx    = FILTER_TABS.findIndex(t => t.value === activeFilter);
   const highlightX   = useSharedValue(0);
-  const tabW         = barWidth / 3;
+  const PAD            = 8;  // matches filterBar paddingHorizontal
+  const INSET          = 3;  // highlight inset from tab edges
+  const tabW           = barWidth > 0 ? (barWidth - PAD * 2) / 3 : 0;
 
   useEffect(() => {
     if (tabW > 0) {
-      highlightX.value = withSpring(activeIdx * tabW, { damping: 22, stiffness: 240 });
+      highlightX.value = withSpring(PAD + activeIdx * tabW + INSET, { damping: 22, stiffness: 240 });
     }
   }, [activeFilter, tabW]);
 
   const highlightStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: highlightX.value }],
-    width: tabW > 0 ? tabW : '33.33%' as any,
+    width: tabW > 0 ? tabW - INSET * 2 : '33.33%' as any,
   }));
 
   return (
@@ -211,40 +237,6 @@ function FilterBar({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Small info icon (circle with i)
-// ─────────────────────────────────────────────────────────────────────────────
-function InfoIcon() {
-  return (
-    <Svg width={13} height={13} viewBox="0 0 13 13" fill="none">
-      <Circle cx="6.5" cy="6.5" r="6" stroke={Colors.gray400} strokeWidth="1" />
-      <Path
-        d="M6.5 6V9.5M6.5 4.5V3.5"
-        stroke={Colors.gray400}
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Green filled checkmark circle
-// ─────────────────────────────────────────────────────────────────────────────
-function CheckBadge() {
-  return (
-    <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
-      <Circle cx="8" cy="8" r="8" fill={Colors.green500} />
-      <Path
-        d="M4.5 8L6.8 10.3L11.5 5.5"
-        stroke="white"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 const POSITIVE_VALUES = new Set(['Included', 'Driver', 'Driver Only', 'Driver + Passenger', 'Driver + Family']);
 
@@ -294,7 +286,11 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
           <View style={styles.cardRow}>
             <View style={styles.insurerLeft}>
               <View style={styles.insurerLogo}>
-                <Text style={styles.insurerInitial}>{quote.insurer[0]}</Text>
+                {INSURER_LOGOS[quote.insurer] ? (
+                  <Image source={INSURER_LOGOS[quote.insurer]} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                ) : (
+                  <Text style={styles.insurerInitial}>{quote.insurer[0]}</Text>
+                )}
               </View>
               <View>
                 <Text style={styles.insurerName}>{quote.insurer}</Text>
@@ -323,12 +319,12 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
             <View style={styles.feature}>
               <View style={styles.featureLabelRow}>
                 <Text style={styles.featureLabel}>Roadside Assist.</Text>
-                <InfoIcon />
+                <Info size={13} color={Colors.gray400} />
               </View>
               <View style={styles.featureValueRow}>
                 {POSITIVE_VALUES.has(quote.roadsideAssist) ? (
                   <>
-                    <CheckBadge />
+                    <CheckCircle size={16} color={Colors.green500} weight="fill" />
                     <Text style={[styles.featureValue, styles.featureIncluded]}>{quote.roadsideAssist}</Text>
                   </>
                 ) : (
@@ -340,12 +336,12 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
             <View style={styles.feature}>
               <View style={styles.featureLabelRow}>
                 <Text style={styles.featureLabel}>Personal Accident</Text>
-                <InfoIcon />
+                <Info size={13} color={Colors.gray400} />
               </View>
               <View style={styles.featureValueRow}>
                 {POSITIVE_VALUES.has(quote.personalAccident) ? (
                   <>
-                    <CheckBadge />
+                    <CheckCircle size={16} color={Colors.green500} weight="fill" />
                     <Text style={[styles.featureValue, styles.featureIncluded]}>{quote.personalAccident}</Text>
                   </>
                 ) : (
@@ -378,17 +374,24 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Shory Plus info bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
+const PAYOUT_OPTIONS = [
+  { label: '฿ 1,400', value: 1400 },
+  { label: '฿ 5,000', value: 5000 },
+  { label: '฿ 10,000', value: 10000 },
+];
+
 function ShoryPlusSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets  = useSafeAreaInsets();
-  const sheetY  = useSharedValue(400);
+  const sheetY  = useSharedValue(500);
   const scrimOp = useSharedValue(0);
+  const [selectedPayout, setSelectedPayout] = useState(1400);
 
   useEffect(() => {
     if (visible) {
       sheetY.value  = withSpring(0, { damping: 26, stiffness: 200 });
       scrimOp.value = withTiming(1, { duration: 260 });
     } else {
-      sheetY.value  = withTiming(400, { duration: 260, easing: Easing.in(Easing.cubic) });
+      sheetY.value  = withTiming(500, { duration: 260, easing: Easing.in(Easing.cubic) });
       scrimOp.value = withTiming(0, { duration: 220 });
     }
   }, [visible]);
@@ -396,40 +399,69 @@ function ShoryPlusSheet({ visible, onClose }: { visible: boolean; onClose: () =>
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrimOp.value }));
 
-  if (!visible && sheetY.value >= 400) return null;
+  if (!visible && sheetY.value >= 500) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.sheetScrim, scrimStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[styles.shorySheet, { paddingBottom: insets.bottom + 16 }, sheetStyle]}>
+      <Animated.View style={[styles.shorySheet, { paddingBottom: insets.bottom + 24 }, sheetStyle]}>
         {/* Handle */}
         <View style={styles.sheetHandle} />
+
         <View style={styles.shorySheetContent}>
-          <Text style={styles.shoryTitle}>🛡 What is Shory Plus?</Text>
-          <Text style={styles.shoryBody}>
-            Shory Plus is an enhanced insurance plan that goes beyond standard third-party cover,
-            giving you and your passengers extra protection with a seamless claims experience.
-          </Text>
-          <View style={styles.shoryBenefits}>
-            {[
-              'Roadside assistance included',
-              'Personal accident cover — driver & passengers',
-              'Same-day policy issuance',
-              '24/7 priority claims support',
-            ].map((b, i) => (
-              <View key={i} style={styles.shoryBenefit}>
-                <Text style={styles.shoryBenefitDot}>✓</Text>
-                <Text style={styles.shoryBenefitText}>{b}</Text>
-              </View>
-            ))}
-          </View>
-          <PressableScale scaleTo={0.97} onPress={onClose}>
-            <View style={styles.shoryCloseBtn}>
-              <Text style={styles.shoryCloseBtnText}>Got it</Text>
+          {/* Header row: badge + close */}
+          <View style={styles.shoryHeaderRow}>
+            <View style={styles.shoryExclusiveBadge}>
+              <Text style={styles.shoryExclusiveText}>Shory Exclusive</Text>
             </View>
-          </PressableScale>
+            <Pressable onPress={onClose} hitSlop={10} style={styles.shoryCloseX}>
+              <Text style={styles.shoryCloseXText}>✕</Text>
+            </Pressable>
+          </View>
+
+          {/* Title */}
+          <Text style={styles.shoryTitle}>Shory Plus</Text>
+          <Text style={styles.shoryPoweredBy}>Powered by NGI</Text>
+
+          {/* Body */}
+          <Text style={styles.shoryBody}>
+            Shory Plus is our exclusive insurance option that gives you{' '}
+            <Text style={styles.shoryBodyBold}>third-party coverage plus cash benefits</Text>
+            {' '}if your car is totaled.
+          </Text>
+          <Text style={styles.shoryBodySub}>
+            You'll get an approximate cash payout based on the coverage you select below.
+          </Text>
+
+          {/* Payout options */}
+          <View style={styles.shoryPayoutRow}>
+            {PAYOUT_OPTIONS.map((opt) => {
+              const active = selectedPayout === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  style={[styles.shoryPayoutCard, active && styles.shoryPayoutCardActive]}
+                  onPress={() => setSelectedPayout(opt.value)}
+                >
+                  <Text style={[styles.shoryPayoutAmount, active && styles.shoryPayoutAmountActive]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={styles.shoryPayoutLabel}>Cash payout</Text>
+                  <View style={[styles.shoryRadio, active && styles.shoryRadioActive]}>
+                    {active && <View style={styles.shoryRadioDot} />}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Footer */}
+          <Text style={styles.shoryFooter}>
+            Shory Plus is powered by NGI.{' '}
+            <Text style={styles.shoryFooterLink}>Terms & Conditions</Text>
+          </Text>
         </View>
       </Animated.View>
     </View>
@@ -444,6 +476,7 @@ export default function QuoteListScreen({ navigation }: Props) {
   const [vehicleExpanded, setVehicleExpanded] = useState(false);
   const [shoryPlusSheet, setShoryPlusSheet]   = useState(false);
   const [isScrolling, setIsScrolling]         = useState(false);
+  const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shoryPlusShown = useRef(false);
   const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -465,13 +498,22 @@ export default function QuoteListScreen({ navigation }: Props) {
     };
   }, []);
 
-  // Scroll-based float bar + notch visibility
-  const handleScrollBeginDrag = useCallback(() => {
+  // Hide both float bar and notch while scrolling (works on web + native)
+  const hideOnScroll = useCallback(() => {
     setIsScrolling(true);
-    floatOffset.value = withTiming(120, { duration: 200, easing: Easing.out(Easing.cubic) });
+    floatOffset.value = withTiming(120, { duration: 180, easing: Easing.out(Easing.cubic) });
+    // Debounce scroll-end — fire ~400ms after last scroll event
+    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
+    scrollEndTimer.current = setTimeout(() => {
+      setIsScrolling(false);
+      floatOffset.value = withSpring(0, { damping: 20, stiffness: 180 });
+    }, 400);
   }, []);
 
+  // Native drag events also trigger the same logic
+  const handleScrollBeginDrag = useCallback(() => hideOnScroll(), [hideOnScroll]);
   const handleScrollEnd = useCallback(() => {
+    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
     setIsScrolling(false);
     floatOffset.value = withSpring(0, { damping: 20, stiffness: 180 });
   }, []);
@@ -507,10 +549,11 @@ export default function QuoteListScreen({ navigation }: Props) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[0]}
+        onScroll={hideOnScroll}
         onScrollBeginDrag={handleScrollBeginDrag}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}
-        scrollEventThrottle={16}
+        scrollEventThrottle={80}
       >
         {/* ── Sticky filter tabs ── */}
         <FilterBar activeFilter={activeFilter} onPress={handleFilterPress} />
@@ -547,9 +590,14 @@ export default function QuoteListScreen({ navigation }: Props) {
           </View>
         </PressableScale>
 
-        <PressableScale scaleTo={0.9}>
+        <PressableScale scaleTo={0.9} onPress={() => {
+          Share.share({
+            title: 'Motor Insurance Quotes',
+            message: 'Check out these motor insurance quotes from Shory — get covered today! https://shory.com',
+          });
+        }}>
           <View style={styles.topBtn}>
-            <Text style={styles.topBtnText}>↑</Text>
+            <Export size={20} color={Colors.brand600} weight="bold" />
           </View>
         </PressableScale>
       </Animated.View>
@@ -764,14 +812,14 @@ const styles = StyleSheet.create({
 
   // ── Floating bar ─────────────────────────────────────────────────────────────
   floatingWrap: {
-    position:  'absolute',
-    bottom:    28,
-    left:      0,
-    right:     0,
-    flexDirection:  'row',
-    justifyContent: 'center',
-    alignItems:     'center',
-    gap:       10,
+    position:        'absolute',
+    bottom:          28,
+    left:            0,
+    right:           0,
+    flexDirection:   'row',
+    justifyContent:  'center',
+    alignItems:      'center',
+    gap:             10,
     paddingHorizontal: 16,
   },
   floatingPill: {
@@ -779,7 +827,7 @@ const styles = StyleSheet.create({
     borderRadius:    100,
     flexDirection:   'row',
     alignItems:      'center',
-    paddingVertical: 13,
+    paddingVertical: 11,
     shadowColor:    '#000',
     shadowOffset:   { width: 0, height: 4 },
     shadowOpacity:  0.22,
@@ -821,19 +869,85 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray300,
     alignSelf: 'center',
     marginTop: 10,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  shorySheetContent: { paddingHorizontal: 24, paddingTop: 12 },
-  shoryTitle: { fontSize: 18, fontWeight: '800', color: Colors.gray900, marginBottom: 10 },
-  shoryBody:  { fontSize: 13, color: Colors.gray700, lineHeight: 20, marginBottom: 16 },
-  shoryBenefits: { gap: 10, marginBottom: 24 },
-  shoryBenefit:  { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  shoryBenefitDot:  { fontSize: 13, color: Colors.green500, fontWeight: '800', width: 16 },
-  shoryBenefitText: { fontSize: 13, color: Colors.gray800, flex: 1, lineHeight: 18 },
-  shoryCloseBtn: {
-    height: 50, borderRadius: 14,
-    backgroundColor: Colors.brand600,
+  shorySheetContent: { paddingHorizontal: 20, paddingTop: 4 },
+  shoryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  shoryExclusiveBadge: {
+    backgroundColor: '#EDE9FF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  shoryExclusiveText: { fontSize: 13, fontWeight: '600', color: '#6A3DAE' },
+  shoryCloseX: {
+    width: 32, height: 32,
     alignItems: 'center', justifyContent: 'center',
   },
-  shoryCloseBtnText: { fontSize: 15, fontWeight: '700', color: Colors.white },
+  shoryCloseXText: { fontSize: 20, color: Colors.gray900 },
+  shoryTitle: {
+    fontSize: 26, fontWeight: '800',
+    color: Colors.gray900,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  shoryPoweredBy: {
+    fontSize: 13, fontWeight: '500',
+    color: Colors.gray600,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  shoryBody: {
+    fontSize: 14, color: Colors.gray700,
+    lineHeight: 22, textAlign: 'center',
+    marginBottom: 10,
+  },
+  shoryBodyBold: { fontWeight: '700', color: Colors.gray900 },
+  shoryBodySub: {
+    fontSize: 14, color: Colors.gray700,
+    lineHeight: 22, textAlign: 'center',
+    marginBottom: 20,
+  },
+  shoryPayoutRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  shoryPayoutCard: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.gray200,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  shoryPayoutCardActive: {
+    borderColor: Colors.brand600,
+    backgroundColor: '#F0F4FF',
+  },
+  shoryPayoutAmount: {
+    fontSize: 16, fontWeight: '700',
+    color: Colors.gray900,
+  },
+  shoryPayoutAmountActive: { color: Colors.gray900 },
+  shoryPayoutLabel: { fontSize: 11, color: Colors.gray500 },
+  shoryRadio: {
+    width: 18, height: 18, borderRadius: 9,
+    borderWidth: 2, borderColor: Colors.gray300,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 4,
+  },
+  shoryRadioActive: { borderColor: Colors.brand600 },
+  shoryRadioDot: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: Colors.brand600,
+  },
+  shoryFooter: { fontSize: 12, color: Colors.gray500, textAlign: 'center' },
+  shoryFooterLink: { color: Colors.brand600, fontWeight: '600' },
 });

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -32,16 +31,15 @@ export const PLATE_DIVIDER_WIDTH = 1;
 const PLATE_BORDER = 4;
 const PLATE_HEIGHT = 60;
 
-// SVG indicator (32px wide) left position per zone — centered on each zone
-// code center:    PLATE_BORDER + CODE_WIDTH/2           = 4 + 31.5 = 35.5 → left = 19.5
-// emirate center: PLATE_BORDER + CODE+DIV + EMI/2       = 4+64+40.5 = 108.5 → left = 92.5
-// number center:  PLATE_BORDER + CODE+DIV+EMI+DIV + remaining/2
-//                 remaining = 324-4-63-1-81-1-4 = 170  → center = 4+145+85 = 234 → left = 218
-const INDICATOR_W = 32;
-const ZONE_SEMI_X: Record<PlateZone, number> = {
-  code:    19.5,
-  emirate: 92.5,
-  number:  218,
+// Indicator: full width of each zone, left-aligned to zone start (inside border)
+// code:    starts at PLATE_BORDER = 4,  width = PLATE_CODE_WIDTH = 63
+// emirate: starts at 4+63+1 = 68,       width = PLATE_EMIRATE_WIDTH = 81
+// number:  starts at 4+63+1+81+1 = 150, width = PLATE_TOTAL_WIDTH-150-4 = 170
+const ZONE_INDICATOR: Record<PlateZone, { left: number; width: number }> = {
+  code:    { left: PLATE_BORDER,                                           width: PLATE_CODE_WIDTH },
+  emirate: { left: PLATE_BORDER + PLATE_CODE_WIDTH + PLATE_DIVIDER_WIDTH,  width: PLATE_EMIRATE_WIDTH },
+  number:  { left: PLATE_BORDER + PLATE_CODE_WIDTH + PLATE_DIVIDER_WIDTH + PLATE_EMIRATE_WIDTH + PLATE_DIVIDER_WIDTH,
+             width: PLATE_TOTAL_WIDTH - PLATE_BORDER * 2 - PLATE_CODE_WIDTH - PLATE_EMIRATE_WIDTH - PLATE_DIVIDER_WIDTH * 2 },
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -102,24 +100,27 @@ export default function PlatePreview({
   const imgSource    = emirate ? EMIRATE_IMAGES[emirate] : null;
   const numberFilled = plateNumber.length > 0;
 
-  // ── Sliding semicircle ───────────────────────────────────────────────────
-  const semiLeft    = useSharedValue(ZONE_SEMI_X[activeZone]);
-  const semiOpacity = useSharedValue(1);
+  // ── Sliding zone indicator ───────────────────────────────────────────────
+  const indLeft    = useSharedValue(ZONE_INDICATOR[activeZone].left);
+  const indWidth   = useSharedValue(ZONE_INDICATOR[activeZone].width);
+  const indOpacity = useSharedValue(1);
 
   useEffect(() => {
-    semiLeft.value = withSpring(ZONE_SEMI_X[activeZone], { damping: 22, stiffness: 220 });
+    indLeft.value  = withSpring(ZONE_INDICATOR[activeZone].left,  { damping: 22, stiffness: 220 });
+    indWidth.value = withSpring(ZONE_INDICATOR[activeZone].width, { damping: 22, stiffness: 220 });
   }, [activeZone]);
 
   useEffect(() => {
-    semiOpacity.value = withTiming(showIndicator ? 1 : 0, {
+    indOpacity.value = withTiming(showIndicator ? 1 : 0, {
       duration: 240,
       easing: Easing.out(Easing.cubic),
     });
   }, [showIndicator]);
 
   const semiStyle = useAnimatedStyle(() => ({
-    left:    semiLeft.value,
-    opacity: semiOpacity.value,
+    left:    indLeft.value,
+    width:   indWidth.value,
+    opacity: indOpacity.value,
   }));
 
   // ── Number digit micro-interaction ───────────────────────────────────────
@@ -193,18 +194,11 @@ export default function PlatePreview({
           </Animated.View>
         </ZoneSection>
 
-        <View style={styles.innerShadow} pointerEvents="none" />
       </View>
 
-      {/* ── SVG indicator — sits just above the bottom border ── */}
-      <Animated.View style={[styles.semiContainer, semiStyle]} pointerEvents="none">
-        <Svg width={32} height={2} viewBox="0 0 32 2" fill="none">
-          <Path
-            d="M0 2C0 0.895431 0.895431 0 2 0H30C31.1046 0 32 0.895431 32 2V2H0V2Z"
-            fill="#1D68FF"
-          />
-        </Svg>
-      </Animated.View>
+      {/* ── Zone indicator bar — full width of active zone, just above bottom border ── */}
+      <Animated.View style={[styles.semiContainer, semiStyle]} pointerEvents="none" />
+
 
     </View>
   );
@@ -227,21 +221,19 @@ const styles = StyleSheet.create({
     flexDirection:   'row',
     backgroundColor: Colors.white,
     overflow:        'hidden',
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 3 },
-    shadowOpacity:   0.15,
-    shadowRadius:    8,
-    elevation:       5,
   },
 
   activeOverlay: {
     backgroundColor: Colors.brand50,
   },
 
-  // SVG indicator — sits just above the bottom border
+  // Zone indicator bar — full width of active zone, inside the bottom border
   semiContainer: {
-    position: 'absolute',
-    top:      PLATE_HEIGHT - PLATE_BORDER - 2,   // 54 — 2px above the border top edge
+    position:        'absolute',
+    bottom:          PLATE_BORDER - 1,
+    height:          3,
+    borderRadius:    2,
+    backgroundColor: Colors.brand600,
   },
 
   divider: {
@@ -289,17 +281,4 @@ const styles = StyleSheet.create({
     color: Colors.black,
   },
 
-  innerShadow: {
-    position:        'absolute',
-    top:             0,
-    left:            0,
-    right:           0,
-    height:          6,
-    backgroundColor: 'transparent',
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 4 },
-    shadowOpacity:   0.25,
-    shadowRadius:    4,
-    elevation:       0,
-  },
 });

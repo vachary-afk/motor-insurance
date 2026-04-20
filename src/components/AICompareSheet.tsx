@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,65 +22,16 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
+import { Sparkle, CheckCircle, X, CaretRight } from 'phosphor-react-native';
 import { Colors } from '../constants/colors';
-
-// ── Sparkle SVG icon ──────────────────────────────────────────────────────────
-function SparkleIcon({ size = 20, color = '#fff' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z"
-        fill={color}
-        opacity={0.9}
-      />
-      <Path
-        d="M19 14L19.9 16.1L22 17L19.9 17.9L19 20L18.1 17.9L16 17L18.1 16.1L19 14Z"
-        fill={color}
-        opacity={0.6}
-      />
-      <Path
-        d="M5 3L5.6 4.4L7 5L5.6 5.6L5 7L4.4 5.6L3 5L4.4 4.4L5 3Z"
-        fill={color}
-        opacity={0.5}
-      />
-    </Svg>
-  );
-}
-
-// ── Check icon ────────────────────────────────────────────────────────────────
-function MiniCheck({ color = Colors.green500 }: { color?: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 14 14" fill="none">
-      <Circle cx="7" cy="7" r="7" fill={color} opacity={0.15} />
-      <Path d="M4 7L6 9L10 5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-// ── Close icon ────────────────────────────────────────────────────────────────
-function CloseIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
-      <Path d="M4 4L14 14M14 4L4 14" stroke={Colors.gray600} strokeWidth="2" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-// ── Chevron right ─────────────────────────────────────────────────────────────
-function ChevronRight({ color = Colors.brand600 }: { color?: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 14 14" fill="none">
-      <Path d="M5 3L9 7L5 11" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+import INSURER_LOGOS from '../constants/insurerLogos';
 
 // ── AI badge ──────────────────────────────────────────────────────────────────
 function AIBadge() {
   return (
     <View style={styles.aiBadge}>
-      <SparkleIcon size={11} color="#fff" />
+      <Sparkle size={11} color="#fff" weight="fill" />
       <Text style={styles.aiBadgeText}>AI Pick</Text>
     </View>
   );
@@ -167,7 +119,7 @@ export default function AICompareSheet({ visible, onClose }: Props) {
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
-              <SparkleIcon size={18} color="#fff" />
+              <Sparkle size={18} color="#fff" weight="fill" />
             </View>
             <View>
               <Text style={styles.headerTitle}>AI Comparison</Text>
@@ -175,7 +127,7 @@ export default function AICompareSheet({ visible, onClose }: Props) {
             </View>
           </View>
           <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-            <CloseIcon />
+            <X size={18} color={Colors.gray600} />
           </Pressable>
         </View>
 
@@ -186,7 +138,11 @@ export default function AICompareSheet({ visible, onClose }: Props) {
             <View style={styles.recCardTop}>
               <View style={styles.recLeft}>
                 <View style={styles.recLogo}>
-                  <Text style={styles.recLogoText}>{AI_RECOMMENDATION.initial}</Text>
+                  {INSURER_LOGOS[AI_RECOMMENDATION.insurer] ? (
+                    <Image source={INSURER_LOGOS[AI_RECOMMENDATION.insurer]} style={{ width: 32, height: 32 }} resizeMode="contain" />
+                  ) : (
+                    <Text style={styles.recLogoText}>{AI_RECOMMENDATION.initial}</Text>
+                  )}
                 </View>
                 <View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -209,7 +165,7 @@ export default function AICompareSheet({ visible, onClose }: Props) {
             <View style={styles.prosList}>
               {AI_RECOMMENDATION.pros.map((p, i) => (
                 <View key={i} style={styles.prosItem}>
-                  <MiniCheck />
+                  <CheckCircle size={14} color={Colors.green500} weight="fill" />
                   <Text style={styles.prosText}>{p}</Text>
                 </View>
               ))}
@@ -217,7 +173,7 @@ export default function AICompareSheet({ visible, onClose }: Props) {
 
             <Pressable style={styles.selectRecBtn}>
               <Text style={styles.selectRecBtnText}>Select AXA — AED 510</Text>
-              <ChevronRight color="#fff" />
+              <CaretRight size={14} color="#fff" />
             </Pressable>
           </View>
 
@@ -229,7 +185,11 @@ export default function AICompareSheet({ visible, onClose }: Props) {
             <View key={q.insurer} style={styles.compareRow}>
               <Text style={styles.compareRank}>#{i + 1}</Text>
               <View style={[styles.compareLogo, { borderColor: q.color + '33' }]}>
-                <Text style={[styles.compareLogoText, { color: q.color }]}>{q.initial}</Text>
+                {INSURER_LOGOS[q.insurer] ? (
+                  <Image source={INSURER_LOGOS[q.insurer]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                ) : (
+                  <Text style={[styles.compareLogoText, { color: q.color }]}>{q.initial}</Text>
+                )}
               </View>
               <View style={styles.compareMiddle}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -251,7 +211,7 @@ export default function AICompareSheet({ visible, onClose }: Props) {
 
           {/* ── AI insight footer ── */}
           <View style={styles.insightCard}>
-            <SparkleIcon size={14} color={Colors.brand600} />
+            <Sparkle size={14} color={Colors.brand600} weight="fill" />
             <Text style={styles.insightText}>
               AXA scores highest overall — combining price, speed, and coverage quality for your vehicle profile.
             </Text>

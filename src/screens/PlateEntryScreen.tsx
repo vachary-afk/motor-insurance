@@ -38,14 +38,32 @@ const EMIRATES = [
   'Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman',
   'Um Al Quwain', 'Ras Al Khaimah', 'Fujairah',
 ];
-const PLATE_CODES: string[] = [
+// Default numeric codes (Abu Dhabi and other emirates)
+const PLATE_CODES_DEFAULT: string[] = [
   '1', '2', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15',
   '16', '17', '18', '19', '20', '21', '22', '50',
 ];
-const PLATE_TEXT_CODES: string[] = [
+const PLATE_TEXT_CODES_DEFAULT: string[] = [
   'Bank', 'Classic', 'Diplomatic', 'Grey', 'Red', 'Code 9',
   'Motorcycle 1', 'Motorcycle 2', 'Motorcycle 3', 'White',
 ];
+
+// Dubai letter codes
+const PLATE_CODES_DUBAI: string[] = [
+  'A','B','C','D','E','F','G','H','I','J','K','L','M',
+  'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+];
+const PLATE_TEXT_CODES_DUBAI: string[] = [
+  'AA','BB','CC','DD','EE','FF','GG','HH','II','JJ','KK','LL','MM',
+  'NN','OO','PP','QQ','RR','SS','TT','UU','VV','WW','XX','YY','ZZ',
+];
+
+function getPlateCodesForEmirate(emirate: string | null) {
+  if (emirate === 'Dubai') {
+    return { codes: PLATE_CODES_DUBAI, textCodes: PLATE_TEXT_CODES_DUBAI };
+  }
+  return { codes: PLATE_CODES_DEFAULT, textCodes: PLATE_TEXT_CODES_DEFAULT };
+}
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 const ZONE_LABELS: Record<PlateZone, string> = {
@@ -213,6 +231,10 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const handleEmirateSelect = useCallback((e: string) => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedEmirate(e);
+    // Reset downstream fields when emirate changes
+    setSelectedCode(null);
+    setCodeInputValue('');
+    setPlateNumber('');
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => switchZone('code'), 380);
   }, [switchZone]);
@@ -235,10 +257,11 @@ export default function PlateEntryScreen({ navigation }: Props) {
 
   const handleCodeInputChange = useCallback((text: string) => {
     setCodeInputValue(text);
-    const allCodes = [...PLATE_CODES, ...PLATE_TEXT_CODES];
+    const { codes, textCodes } = getPlateCodesForEmirate(selectedEmirate);
+    const allCodes = [...codes, ...textCodes];
     const match = allCodes.find(c => c.toLowerCase() === text.toLowerCase());
     setSelectedCode(match ?? null);
-  }, []);
+  }, [selectedEmirate]);
 
   const handleNumpadPress = useCallback((digit: string) => {
     triggerHaptic();
@@ -252,6 +275,11 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const handleZonePress = useCallback((zone: PlateZone) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
     setShowIndicator(true);
+    // Reset code input when navigating back to the code zone
+    if (zone === 'code') {
+      setSelectedCode(null);
+      setCodeInputValue('');
+    }
     switchZone(zone);
   }, [switchZone]);
 
@@ -271,17 +299,21 @@ export default function PlateEntryScreen({ navigation }: Props) {
   for (let i = 0; i < EMIRATES.length; i += 2) emirateRows.push(EMIRATES.slice(i, i + 2));
 
   const query = codeInputValue.trim().toLowerCase();
+  const { codes: PLATE_CODES, textCodes: PLATE_TEXT_CODES } = getPlateCodesForEmirate(selectedEmirate);
   const filteredNumCodes = query
-    ? PLATE_CODES.filter(c => c.includes(query))
+    ? PLATE_CODES.filter(c => c.toLowerCase().includes(query))
     : PLATE_CODES;
   const filteredTextCodes = query
     ? PLATE_TEXT_CODES.filter(c => c.toLowerCase().includes(query))
     : PLATE_TEXT_CODES;
 
+  const isDubai = selectedEmirate === 'Dubai';
+  const numColCount  = isDubai ? 6 : 4;
+  const textColCount = isDubai ? 6 : 2;
   const numCodeRows: string[][] = [];
-  for (let i = 0; i < filteredNumCodes.length; i += 4) numCodeRows.push(filteredNumCodes.slice(i, i + 4));
+  for (let i = 0; i < filteredNumCodes.length; i += numColCount) numCodeRows.push(filteredNumCodes.slice(i, i + numColCount));
   const textCodeRows: string[][] = [];
-  for (let i = 0; i < filteredTextCodes.length; i += 2) textCodeRows.push(filteredTextCodes.slice(i, i + 2));
+  for (let i = 0; i < filteredTextCodes.length; i += textColCount) textCodeRows.push(filteredTextCodes.slice(i, i + textColCount));
 
   return (
     <View style={styles.overlay}>
@@ -370,10 +402,12 @@ export default function PlateEntryScreen({ navigation }: Props) {
                       ))}
                     </View>
                   ))}
-                  {/* Special types */}
+                  {/* Special / double letter plates */}
                   {filteredTextCodes.length > 0 && (
                     <>
-                      <Text style={styles.sectionLabel}>Special types</Text>
+                      <Text style={styles.sectionLabel}>
+                        {selectedEmirate === 'Dubai' ? 'Special / Double Letter Plates' : 'Special types'}
+                      </Text>
                       {textCodeRows.map((row, ri) => (
                         <View key={`t${ri}`} style={styles.row}>
                           {row.map((c) => (

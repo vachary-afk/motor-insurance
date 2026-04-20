@@ -1,0 +1,25 @@
+const INSURER_LOGOS: Record<string, any> = {
+  'RAK':               require('../../assets/ic/RAK.svg'),
+  'AXA':               require('../../assets/ic/AXA.svg'),
+  'RSA':               require('../../assets/ic/RSA.svg'),
+  'ADNIC':             require('../../assets/ic/ADNIC.svg'),
+  'Sukoon':            require('../../assets/ic/Sukoon.svg'),
+  'NGI':               require('../../assets/ic/NGI.svg'),
+  'Orient':            require('../../assets/ic/Orient.svg'),
+  'Orient Takaful':    require('../../assets/ic/Orient Takaful.svg'),
+  'Dubai':             require('../../assets/ic/Dubai.svg'),
+  'Salama':            require('../../assets/ic/Salama.svg'),
+  'Watania':           require('../../assets/ic/Watania.svg'),
+  'Fidelity':          require('../../assets/ic/Fidelity.svg'),
+  'Adamjee Insurance': require('../../assets/ic/Adamjee Insurance.svg'),
+  'Qatar':             require('../../assets/ic/Qatar.svg'),
+  'Al Ain':            require('../../assets/ic/Al Ain.svg'),
+  'Union':             require('../../assets/ic/Union.svg'),
+  'AFNIC':             require('../../assets/ic/AFNIC.svg'),
+  'AWNIC':             require('../../assets/ic/AWNIC.svg'),
+  'ADNTC':             require('../../assets/ic/ADNTC.svg'),
+  'Insurance House':   require('../../assets/ic/Insurance House.svg'),
+  'Metaq':             require('../../assets/ic/Metaq.svg'),
+};
+
+export default INSURER_LOGOS;

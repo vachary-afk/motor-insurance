@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { CaretLeft, X, ChatDots } from 'phosphor-react-native';
 import { Colors } from '../constants/colors';
 
 type NavBarProps = {
@@ -17,10 +18,10 @@ export default function NavBar({ title, onBack, showChat = false, backStyle = 'a
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
             {backStyle === 'arrow' ? (
               <View style={styles.arrowCircle}>
-                <Text style={styles.arrowIcon}>‹</Text>
+                <CaretLeft size={16} color={Colors.gray900} weight="bold" />
               </View>
             ) : (
-              <Text style={styles.closeIcon}>✕</Text>
+              <X size={18} color={Colors.gray900} />
             )}
           </TouchableOpacity>
         ) : (
@@ -32,7 +33,7 @@ export default function NavBar({ title, onBack, showChat = false, backStyle = 'a
         <View style={styles.rightActions}>
           {showChat && (
             <View style={styles.chatBtn}>
-              <Text style={styles.chatIcon}>💬</Text>
+              <ChatDots size={22} color={Colors.gray900} />
               <View style={styles.chatDot} />
             </View>
           )}
@@ -67,16 +68,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowIcon: {
-    fontSize: 20,
-    color: Colors.gray900,
-    lineHeight: 22,
-    marginTop: -1,
-  },
-  closeIcon: {
-    fontSize: 16,
-    color: Colors.gray900,
-  },
   title: {
     fontSize: 16,
     fontWeight: '700',
@@ -93,9 +84,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     position: 'relative',
-  },
-  chatIcon: {
-    fontSize: 16,
   },
   chatDot: {
     position: 'absolute',

@@ -128,8 +128,11 @@ export default function HomeScreen({ navigation }: Props) {
           onPress={() => {}}
         />
 
-        {/* Google Rating Widget */}
-        <Animated.View style={[styles.ratingWidget, ratingStyle]}>
+      </ScrollView>
+
+      {/* Rating widget centred in remaining space between cards-scroll and terms */}
+      <Animated.View style={[styles.ratingWidgetWrap, ratingStyle]}>
+        <View style={styles.ratingWidget}>
           <Image source={{ uri: GOOGLE_ICON }} style={styles.googleIcon} resizeMode="contain" />
           <View style={styles.divider} />
           <View style={styles.ratingContent}>
@@ -144,8 +147,8 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
             <Text style={styles.ratingSubtext}>By 11,000+ people.</Text>
           </View>
-        </Animated.View>
-      </ScrollView>
+        </View>
+      </Animated.View>
 
       {/* Terms — pinned to footer above safe area */}
       <Animated.View style={[styles.termsContainer, termsStyle]}>
@@ -174,7 +177,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 16,
     gap: 16,
   },
   card: {
@@ -233,11 +236,15 @@ const styles = StyleSheet.create({
   },
 
   // Rating
+  ratingWidgetWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
   ratingWidget: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 12,
     gap: 10,
     paddingHorizontal: 4,
     paddingVertical: 4,
