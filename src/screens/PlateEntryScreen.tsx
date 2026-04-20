@@ -189,7 +189,29 @@ export default function PlateEntryScreen({ navigation }: Props) {
   const [codeInputValue, setCodeInputValue] = useState('');
   const [plateNumber, setPlateNumber] = useState<string>('');
   const [showIndicator, setShowIndicator] = useState(true);
+  const [toastMsg, setToastMsg] = useState('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Toast animation
+  const toastOp = useSharedValue(0);
+  const toastY  = useSharedValue(8);
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity:   toastOp.value,
+    transform: [{ translateY: toastY.value }],
+  }));
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    toastY.value  = -16;
+    toastOp.value = withTiming(1, { duration: 180 });
+    toastY.value  = withSpring(0, { damping: 22, stiffness: 240 });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => {
+      toastOp.value = withTiming(0, { duration: 220 });
+      toastY.value  = withTiming(-10, { duration: 200 });
+    }, 2400);
+  }, []);
 
   // Sheet + scrim entrance
   const sheetY = useSharedValue(SCREEN_HEIGHT);
@@ -198,7 +220,10 @@ export default function PlateEntryScreen({ navigation }: Props) {
   useEffect(() => {
     sheetY.value = withSpring(0, { damping: 26, stiffness: 180, mass: 1.0, overshootClamping: false });
     scrimOpacity.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) });
-    return () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); };
+    return () => {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
   }, []);
 
   const dismiss = useCallback(() => {
@@ -273,15 +298,17 @@ export default function PlateEntryScreen({ navigation }: Props) {
   }, [plateNumber]);
 
   const handleZonePress = useCallback((zone: PlateZone) => {
+    // Guard: code and number require emirate to be selected first
+    if ((zone === 'code' || zone === 'number') && !selectedEmirate) {
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      showToast('Please select an emirate first');
+      switchZone('emirate');
+      return;
+    }
     if (Platform.OS !== 'web') Haptics.selectionAsync();
     setShowIndicator(true);
-    // Reset code input when navigating back to the code zone
-    if (zone === 'code') {
-      setSelectedCode(null);
-      setCodeInputValue('');
-    }
     switchZone(zone);
-  }, [switchZone]);
+  }, [switchZone, selectedEmirate, showToast]);
 
   const canContinue = selectedEmirate !== null && selectedCode !== null && plateNumber.length > 0;
 
@@ -331,6 +358,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
         {/* Title */}
         <View style={[styles.titleBlock, { marginTop: insets.top + 48 }]}>
           <Text style={styles.title}>Share plate details for{'\n'}instant quotes.</Text>
+          <Text style={styles.titleHint}>Tap plate below to enter your details</Text>
         </View>
 
         {/* Plate + zone label */}
@@ -343,6 +371,11 @@ export default function PlateEntryScreen({ navigation }: Props) {
             onZonePress={handleZonePress}
             showIndicator={showIndicator}
           />
+          {/* Warning toast — appears right below the plate */}
+          <Animated.View style={[styles.toast, toastStyle]} pointerEvents="none">
+            <Text style={styles.toastIcon}>⚠️</Text>
+            <Text style={styles.toastText}>{toastMsg}</Text>
+          </Animated.View>
           <Animated.Text style={[styles.zoneLabel, labelStyle]}>
             {ZONE_LABELS[activeZone]}
           </Animated.Text>
@@ -442,6 +475,7 @@ export default function PlateEntryScreen({ navigation }: Props) {
         <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
           <ContinueButton enabled={canContinue} onPress={handleContinue} />
         </View>
+
       </Animated.View>
     </View>
   );
@@ -488,6 +522,13 @@ const styles = StyleSheet.create({
     color: Colors.gray900,
     textAlign: 'center',
     lineHeight: 28,
+  },
+  titleHint: {
+    fontSize:   13,
+    color:      Colors.gray500,
+    textAlign:  'center',
+    marginTop:  6,
+    lineHeight: 18,
   },
   // Plate + label
   plateArea: {
@@ -635,5 +676,31 @@ const styles = StyleSheet.create({
   termsLink: {
     color: Colors.brand600,
     textDecorationLine: 'underline',
+  },
+  toast: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               8,
+    backgroundColor:   '#FFFBEB',
+    borderWidth:       1.5,
+    borderColor:       '#F59E0B',
+    borderRadius:      12,
+    paddingHorizontal: 14,
+    paddingVertical:   10,
+    marginHorizontal:  16,
+    shadowColor:       '#F59E0B',
+    shadowOffset:      { width: 0, height: 2 },
+    shadowOpacity:     0.15,
+    shadowRadius:      8,
+    elevation:         4,
+  },
+  toastIcon: {
+    fontSize: 16,
+  },
+  toastText: {
+    fontSize:   13,
+    fontWeight: '600',
+    color:      '#92400E',
+    flex:       1,
   },
 });
