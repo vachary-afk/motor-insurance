@@ -34,8 +34,11 @@
       "display": "standalone",
       "orientation": "portrait",
       "lang": "en",
-      "scope": "/",
-      "startUrl": "/"
+      "scope": "/motor-insurance/",
+      "startUrl": "/motor-insurance/"
+    },
+    "experiments": {
+      "baseUrl": "/motor-insurance/"
     },
     "extra": {
       "eas": {
