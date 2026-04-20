@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   Home: undefined;
   PlateEntry: { step?: 'emirate' | 'code' | 'number' };
+  PlateEntryV2: { step?: 'emirate' | 'code' | 'number' };
   Loading: undefined;
   QuoteList: undefined;
 };

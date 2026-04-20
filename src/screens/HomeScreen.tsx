@@ -112,19 +112,29 @@ export default function HomeScreen({ navigation }: Props) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* V1 — grid selector + custom numpad */}
         <OptionCard
           imageUri={CAR_BIKE_IMG}
           title="Renew your vehicle insurance"
-          subtitle="Enter your plate number for instant quotes."
+          subtitle="Grid selector · Custom numpad"
           delay={80}
           onPress={() => navigation.navigate('PlateEntry', { step: 'emirate' })}
+        />
+
+        {/* V2 — code bottom sheet + native keyboard */}
+        <OptionCard
+          imageUri={CAR_BIKE_IMG}
+          title="Renew your vehicle insurance"
+          subtitle="Code bottom sheet · Native keyboard"
+          delay={140}
+          onPress={() => navigation.navigate('PlateEntryV2', { step: 'emirate' })}
         />
 
         <OptionCard
           imageUri={CAR_IMG}
           title="Buying a new or used vehicle?"
           subtitle="Get covered before you drive it home."
-          delay={160}
+          delay={200}
           onPress={() => {}}
         />
 

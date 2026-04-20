@@ -12,6 +12,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import PlateEntryScreen from './src/screens/PlateEntryScreen';
 import LoadingScreen from './src/screens/LoadingScreen';
 import QuoteListScreen from './src/screens/QuoteListScreen';
+import PlateEntryScreenV2 from './src/screens/PlateEntryScreenV2';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,6 +26,15 @@ const AppContent = () => (
           <Stack.Screen
             name="PlateEntry"
             component={PlateEntryScreen}
+            options={{
+              presentation: 'transparentModal',
+              animation: 'none',
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="PlateEntryV2"
+            component={PlateEntryScreenV2}
             options={{
               presentation: 'transparentModal',
               animation: 'none',
