@@ -73,8 +73,8 @@ function getPlateCodesForEmirate(emirate: string | null) {
 
 const ZONE_LABELS: Record<PlateZone, string> = {
   emirate: 'Emirates of registration',
-  code:    'Select plate code',
-  number:  'Enter plate number',
+  code:    '',
+  number:  '',
 };
 
 // ─── ZonePanel (fade-slide on key change) ─────────────────────────────────
@@ -368,9 +368,8 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
         </Pressable>
 
         {/* Title */}
-        <View style={[styles.titleBlock, { marginTop: insets.top + 48 }]}>
+        <View style={[styles.titleBlock, { marginTop: insets.top + 138 }]}>
           <Text style={styles.title}>Share plate details for{'\n'}instant quotes.</Text>
-          <Text style={styles.titleHint}>Tap plate below to enter your details</Text>
         </View>
 
         {/* Plate preview + toast + label */}
@@ -383,13 +382,16 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
             onZonePress={handleZonePress}
             showIndicator={showIndicator}
           />
+          <Text style={styles.titleHint}>Tap any plate section to edit your details.</Text>
           <Animated.View style={[styles.toast, toastStyle]} pointerEvents="none">
             <Text style={styles.toastIcon}>⚠️</Text>
             <Text style={styles.toastText}>{toastMsg}</Text>
           </Animated.View>
-          <Animated.Text style={[styles.zoneLabel, labelStyle]}>
-            {ZONE_LABELS[activeZone]}
-          </Animated.Text>
+          {!!ZONE_LABELS[activeZone] && (
+            <Animated.Text style={[styles.zoneLabel, labelStyle]}>
+              {ZONE_LABELS[activeZone]}
+            </Animated.Text>
+          )}
         </View>
 
         {/* Input panel */}
@@ -420,17 +422,6 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
                 </ScrollView>
               )}
 
-              {/* ── Code zone — tap to open bottom sheet ── */}
-              {activeZone === 'code' && (
-                <View style={styles.codeZoneWrap}>
-                  <Pressable style={styles.codePickerBtn} onPress={openCodeSheet}>
-                    <Text style={[styles.codePickerText, selectedCode && styles.codePickerTextSelected]}>
-                      {selectedCode ?? 'Tap to select plate code'}
-                    </Text>
-                    <Text style={styles.codePickerChevron}>›</Text>
-                  </Pressable>
-                </View>
-              )}
 
               {/* ── Number zone — keyboard triggered from plate tap ── */}
               {activeZone === 'number' && (
@@ -614,7 +605,7 @@ const styles = StyleSheet.create({
   // Plate area
   plateArea: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 0,
     gap: 8,
   },
   zoneLabel: {
@@ -630,6 +621,7 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 10,
   },
 
   // Tag grid (emirate zone)
@@ -709,6 +701,9 @@ const styles = StyleSheet.create({
 
   // Toast
   toast: {
+    position: 'absolute',
+    top: -50,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -718,7 +713,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginHorizontal: 16,
     shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -726,7 +720,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   toastIcon: { fontSize: 16 },
-  toastText: { fontSize: 13, fontWeight: '600', color: '#92400E', flex: 1 },
+  toastText: { fontSize: 13, fontWeight: '600', color: '#92400E' },
 
   // ── Code bottom sheet ──────────────────────────────────────────────────
   codeSheetScrim: { backgroundColor: 'rgba(0,0,0,0.45)' },
@@ -738,7 +732,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: SCREEN_HEIGHT * 0.72,
+    maxHeight: SCREEN_HEIGHT * 0.55,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
