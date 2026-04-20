@@ -27,9 +27,13 @@ jobs:
       - name: Build Expo web
         run: npx expo export --platform web
 
+      - name: Disable Jekyll (allow _expo folder)
+        run: touch ./dist/.nojekyll
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           force_orphan: true
+          enable_jekyll: false
