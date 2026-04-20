@@ -297,7 +297,7 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
       setTimeout(openCodeSheet, 120);
     } else if (zone === 'number') {
       switchZone('number');
-      setTimeout(() => numberInputRef.current?.focus(), 120);
+      setTimeout(() => numberInputRef.current?.focus(), 60);
     } else {
       switchZone(zone);
     }
@@ -324,7 +324,7 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
       switchZone('number');
-      setTimeout(() => numberInputRef.current?.focus(), 120);
+      setTimeout(() => numberInputRef.current?.focus(), 60);
     }, 400);
   }, [closeCodeSheet, switchZone]);
 
@@ -432,28 +432,32 @@ export default function PlateEntryScreenV2({ navigation }: Props) {
                 </View>
               )}
 
-              {/* ── Number zone — native keyboard ── */}
+              {/* ── Number zone — keyboard triggered from plate tap ── */}
               {activeZone === 'number' && (
                 <View style={styles.numberZoneWrap}>
+                  {/* Invisible TextInput — keyboard trigger only, input shown on plate */}
                   <TextInput
                     ref={numberInputRef}
-                    style={styles.numberInput}
+                    style={styles.hiddenInput}
                     value={plateNumber}
                     onChangeText={(t) => {
-                      // only allow digits, max 5
                       const digits = t.replace(/[^0-9]/g, '').slice(0, 5);
                       setPlateNumber(digits);
                     }}
                     keyboardType="number-pad"
                     maxLength={5}
-                    placeholder="Enter plate number"
-                    placeholderTextColor={Colors.gray400}
                     returnKeyType="done"
-                    autoFocus={false}
-                    accessible
-                    accessibilityLabel="Plate number"
+                    accessible={false}
+                    importantForAccessibility="no"
                   />
-                  <Text style={styles.numberHint}>Up to 5 digits</Text>
+                  <View style={styles.numberPrompt}>
+                    <Text style={styles.numberPromptIcon}>🔢</Text>
+                    <Text style={styles.numberPromptText}>
+                      {plateNumber.length > 0
+                        ? `${plateNumber} — tap plate to keep typing`
+                        : 'Type your plate number using the keyboard'}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -679,26 +683,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Number zone — native keyboard
-  numberZoneWrap: { flex: 1, paddingTop: 8, gap: 10 },
-  numberInput: {
-    backgroundColor: Colors.gray50,
+  // Number zone — keyboard triggered from plate tap
+  numberZoneWrap: { flex: 1, paddingTop: 16, alignItems: 'center', gap: 0 },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    left: -999,
+  },
+  numberPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Colors.brand50,
     borderWidth: 1.5,
-    borderColor: Colors.gray200,
+    borderColor: Colors.brand100,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.gray900,
-    textAlign: 'center',
-    letterSpacing: 6,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
+    alignSelf: 'stretch',
   },
-  numberHint: {
-    fontSize: 12,
-    color: Colors.gray500,
-    textAlign: 'center',
+  numberPromptIcon: { fontSize: 20 },
+  numberPromptText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.brand600,
+    fontWeight: '500',
+    lineHeight: 20,
   },
 
   // Footer
